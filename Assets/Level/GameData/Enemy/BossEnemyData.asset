@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3cce463a8e5302b43983d8c03c7bfc9d, type: 3}
+  m_Name: BossEnemyData
+  m_EditorClassIdentifier: 
+  id: boss_golem
+  stat:
+    speed: 20
+    health: 30
+    attackDamage: 20
+    attackRange: 4.5
+  enemyPrefab: {fileID: 8319810390458240638, guid: 07646f28c536bf8438f9564c51c5f9f6, type: 3}

@@ -1,0 +1,607 @@
+[
+  {
+    "name": "Level 1",
+    "waveData": [
+      {
+        "enemyData": [
+          {
+            "enemyId": "melee",
+            "amount": 2
+          },
+          {
+            "enemyId": "sword",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 5
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "longRange",
+            "amount": 2
+          }
+        ],
+        "timeNextWave": 7
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "boss_golem",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 0
+      }
+    ],
+    "dungeon": "prefab_dungeon_1",
+    "dungeonData": {
+      "playerPosition": "-8,-12,-280",
+      "enemySpawnData": {
+        "longHall": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "spider",
+              "amount": 10
+            }
+          ]
+        },
+        "bossArea": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "boss",
+              "amount": 1
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "Level 2",
+    "waveData": [
+      {
+        "enemyData": [
+          {
+            "enemyId": "sword",
+            "amount": 2
+          },
+          {
+            "enemyId": "melee",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 4
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "longRange",
+            "amount": 2
+          }
+        ],
+        "timeNextWave": 6
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "boss_golem",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 0
+      }
+    ],
+    "dungeon": "prefab_dungeon_2",
+    "dungeonData": {
+      "playerPosition": "-4, 12,-70",
+      "enemySpawnData": {
+        "longHall": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "spider",
+              "amount": 10
+            }
+          ]
+        },
+        "bossArea": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "boss",
+              "amount": 1
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "Level 3",
+    "waveData": [
+      {
+        "enemyData": [
+          {
+            "enemyId": "longRange",
+            "amount": 2
+          },
+          {
+            "enemyId": "melee",
+            "amount": 2
+          }
+        ],
+        "timeNextWave": 5
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "sword",
+            "amount": 3
+          }
+        ],
+        "timeNextWave": 8
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "boss_golem",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 0
+      }
+    ],
+    "dungeon": "prefab_dungeon_3",
+    "dungeonData": {
+      "playerPosition": "-3.5, -5, 35",
+      "enemySpawnData": {
+        "longHall": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "spider",
+              "amount": 10
+            }
+          ]
+        },
+        "bossArea": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "boss",
+              "amount": 1
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "Level 4",
+    "waveData": [
+      {
+        "enemyData": [
+          {
+            "enemyId": "melee",
+            "amount": 3
+          }
+        ],
+        "timeNextWave": 3
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "sword",
+            "amount": 2
+          },
+          {
+            "enemyId": "longRange",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 6
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "boss_golem",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 0
+      }
+    ],
+    "dungeon": "prefab_dungeon_3",
+    "dungeonData": {
+      "playerPosition": "-3.5, -5, 35",
+      "enemySpawnData": {
+        "longHall": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "spider",
+              "amount": 10
+            }
+          ]
+        },
+        "bossArea": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "boss",
+              "amount": 1
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "Level 5",
+    "waveData": [
+      {
+        "enemyData": [
+          {
+            "enemyId": "sword",
+            "amount": 2
+          }
+        ],
+        "timeNextWave": 4
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "longRange",
+            "amount": 2
+          },
+          {
+            "enemyId": "melee",
+            "amount": 2
+          }
+        ],
+        "timeNextWave": 7
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "boss_golem",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 0
+      }
+    ],
+    "dungeon": "prefab_dungeon_1",
+    "dungeonData": {
+      "playerPosition": "-2,-6,-240",
+      "enemySpawnData": {
+        "longHall": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "spider",
+              "amount": 10
+            }
+          ]
+        },
+        "bossArea": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "boss",
+              "amount": 1
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "Level 6",
+    "waveData": [
+      {
+        "enemyData": [
+          {
+            "enemyId": "melee",
+            "amount": 2
+          },
+          {
+            "enemyId": "sword",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 5
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "longRange",
+            "amount": 3
+          }
+        ],
+        "timeNextWave": 8
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "boss_golem",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 0
+      }
+    ],
+    "dungeon": "prefab_dungeon_1",
+    "dungeonData": {
+      "playerPosition": "-2,-6,-240",
+      "enemySpawnData": {
+        "longHall": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "spider",
+              "amount": 10
+            }
+          ]
+        },
+        "bossArea": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "boss",
+              "amount": 1
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "Level 7",
+    "waveData": [
+      {
+        "enemyData": [
+          {
+            "enemyId": "longRange",
+            "amount": 2
+          }
+        ],
+        "timeNextWave": 4
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "sword",
+            "amount": 2
+          },
+          {
+            "enemyId": "melee",
+            "amount": 2
+          }
+        ],
+        "timeNextWave": 6
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "boss_golem",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 0
+      }
+    ],
+    "dungeon": "prefab_dungeon_1",
+    "dungeonData": {
+      "playerPosition": "-2,-6,-240",
+      "enemySpawnData": {
+        "longHall": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "spider",
+              "amount": 10
+            }
+          ]
+        },
+        "bossArea": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "boss",
+              "amount": 1
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "Level 8",
+    "waveData": [
+      {
+        "enemyData": [
+          {
+            "enemyId": "sword",
+            "amount": 3
+          }
+        ],
+        "timeNextWave": 3
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "longRange",
+            "amount": 2
+          }
+        ],
+        "timeNextWave": 5
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "melee",
+            "amount": 2
+          }
+        ],
+        "timeNextWave": 7
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "boss_golem",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 0
+      }
+    ],
+    "dungeon": "prefab_dungeon_1",
+    "dungeonData": {
+      "playerPosition": "-2,-6,-240",
+      "enemySpawnData": {
+        "longHall": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "spider",
+              "amount": 10
+            }
+          ]
+        },
+        "bossArea": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "boss",
+              "amount": 1
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "Level 9",
+    "waveData": [
+      {
+        "enemyData": [
+          {
+            "enemyId": "melee",
+            "amount": 2
+          },
+          {
+            "enemyId": "longRange",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 5
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "sword",
+            "amount": 3
+          }
+        ],
+        "timeNextWave": 8
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "boss_golem",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 0
+      }
+    ],
+    "dungeon": "prefab_dungeon_1",
+    "dungeonData": {
+      "playerPosition": "-2,-6,-240",
+      "enemySpawnData": {
+        "longHall": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "spider",
+              "amount": 10
+            }
+          ]
+        },
+        "bossArea": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "boss",
+              "amount": 1
+            }
+          ]
+        }
+      }
+    }
+  },
+  {
+    "name": "Level 10",
+    "waveData": [
+      {
+        "enemyData": [
+          {
+            "enemyId": "sword",
+            "amount": 2
+          },
+          {
+            "enemyId": "longRange",
+            "amount": 2
+          }
+        ],
+        "timeNextWave": 4
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "melee",
+            "amount": 3
+          }
+        ],
+        "timeNextWave": 6
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "boss_golem",
+            "amount": 2
+          }
+        ],
+        "timeNextWave": 0
+      }
+    ],
+    "dungeon": "prefab_dungeon_1",
+    "dungeonData": {
+      "playerPosition": "-2,-6,-240",
+      "enemySpawnData": {
+        "longHall": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "spider",
+              "amount": 10
+            }
+          ]
+        },
+        "bossArea": {
+          "spawnPosition": "0,0,0",
+          "enemyData": [
+            {
+              "enemyId": "boss",
+              "amount": 1
+            }
+          ]
+        }
+      }
+    }
+  }
+]
