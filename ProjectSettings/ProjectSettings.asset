@@ -890,10 +890,10 @@ PlayerSettings:
   captureStartupLogs: {}
   activeInputHandler: 1
   windowsGamepadBackendHint: 0
-  cloudProjectId: a1b602bc-0f55-4065-81ec-451e2525f26f
+  cloudProjectId: c69910f2-c514-4719-8c4b-11f6d12eef9a
   framebufferDepthMemorylessMode: 0
   qualitySettingsNames: []
-  projectName: The Tunnel
+  projectName: graduation_project
   organizationId: phungthuc39
   cloudEnabled: 0
   legacyClampBlendShapeWeights: 0

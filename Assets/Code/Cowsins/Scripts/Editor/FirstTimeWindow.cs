@@ -15,11 +15,11 @@ namespace cowsins
         [MenuItem("Cowsins/FPS Engine Startup")]
         public static void OpenWindow()
         {
-            FirstTimeWindow window = GetWindow<FirstTimeWindow>();
-            window.titleContent = new GUIContent("FPS Engine Startup");
-            window.minSize = new Vector2(420, 600);
-            window.maxSize = new Vector2(420, 600);
-            window.Show();
+            // FirstTimeWindow window = GetWindow<FirstTimeWindow>();
+            // window.titleContent = new GUIContent("FPS Engine Startup");
+            // window.minSize = new Vector2(420, 600);
+            // window.maxSize = new Vector2(420, 600);
+            // window.Show();
         }
 
         #endregion

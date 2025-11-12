@@ -11,7 +11,7 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 18cde282a8d045bf9d245fdcfaa7271b, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Unity.Multiplayer.Center.Editor::Unity.Multiplayer.Center.Questionnaire.UserChoicesObject
+  m_EditorClassIdentifier: 
   QuestionnaireVersion: 1.3
   UserAnswers:
     Answers:
@@ -29,8 +29,8 @@ MonoBehaviour:
       - ClientServer
     - QuestionId: PlayerCount
       Answers:
-      - 2
+      - 4
   Preset: 2
   SelectedSolutions:
-    SelectedHostingModel: 2
+    SelectedHostingModel: 1
     SelectedNetcodeSolution: 2

@@ -26,10 +26,10 @@ namespace cowsins
         static DraggableButtonInSceneView()
         {
             // Gather Visibility State from Editor Prefs
-            showDraggableButton = EditorPrefs.GetBool(ShowDraggableButtonKey, true);
-            SceneView.duringSceneGui += OnSceneGUI;
+            // showDraggableButton = EditorPrefs.GetBool(ShowDraggableButtonKey, true);
+            // SceneView.duringSceneGui += OnSceneGUI;
 
-            logoIcon = Resources.Load<Texture2D>("CustomEditor/LogoIcon");
+            // logoIcon = Resources.Load<Texture2D>("CustomEditor/LogoIcon");
         }
 
         private static void OnSceneGUI(SceneView sceneView)
@@ -65,8 +65,6 @@ namespace cowsins
                 imageSize.x,
                 imageSize.y
             );
-
-            // GUI.DrawTexture(imageRect, logoIcon, ScaleMode.ScaleToFit);
 
             // Draw the menu if it should be visible
             if (showMenu && !isDragging)

@@ -1653,7 +1653,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 474bcb49853aa07438625e644c072ee6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Version: 4
+  m_Version: 3
   m_UsePipelineSettings: 1
   m_AdditionalLightsShadowResolutionTier: 2
   m_LightLayerMask: 1
@@ -5339,7 +5339,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4724416249528715359, guid: f460ae24b3ecb31438fc749983a7fa50, type: 3}
       propertyPath: m_Name
-      value: PlayerManager
+      value: CowsinsFPSController
       objectReference: {fileID: 0}
     - target: {fileID: 5423754974956347408, guid: f460ae24b3ecb31438fc749983a7fa50, type: 3}
       propertyPath: m_AnchorMax.y
