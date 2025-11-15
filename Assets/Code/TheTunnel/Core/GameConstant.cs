@@ -14,8 +14,12 @@ namespace TheTunnel.Core
 
         public const int TIME_GAP_BETWEEN_LEVEL_BY_SECONDS = 5;
 
-        public const string DUNGEON_SCENE_NAME = "dungeon_gameplay";
+        public const string SCENE_DUNGEON_NAME = "scene_dungeon";
 
         public const string SCENE_PLAY_NAME = "scene_play";
+
+        public const string SCENE_BOOT_NAME = "scene_boot";
+
+        public const string SCENE_MAIN_NAME = "scene_main";
     }
 }

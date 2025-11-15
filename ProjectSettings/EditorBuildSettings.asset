@@ -6,14 +6,17 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Level/Scenes/scene_boot.unity
+    guid: 862096fa41d50f748be4f1218bbbf485
+  - enabled: 1
+    path: Assets/Level/Scenes/scene_main.unity
+    guid: d2ad0c41c55ae9047beb8e8348022b5d
+  - enabled: 1
     path: Assets/Level/Scenes/scene_play.unity
     guid: 99c9720ab356a0642a771bea13969a05
   - enabled: 1
-    path: Assets/Level/Scenes/dungeon_gameplay.unity
+    path: Assets/Level/Scenes/scene_dungeon.unity
     guid: f6ea6019550dcb14792ebfbd743e4ef2
-  - enabled: 1
-    path: Assets/Widgets/Scenes/WidgetsQuickstart.unity
-    guid: 77e21102f17f01d4c8eec42c8bbc88b2
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: 33f591010f343104f853b337a1fca25a, type: 2}
   m_UseUCBPForAssetBundles: 0

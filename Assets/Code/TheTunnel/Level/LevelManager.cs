@@ -73,7 +73,7 @@ namespace TheTunnel.Level
 
         public void ExitDungeonLevel()
         {
-            if (SceneManager.GetActiveScene().name != GameConstant.DUNGEON_SCENE_NAME)
+            if (SceneManager.GetActiveScene().name != GameConstant.SCENE_DUNGEON_NAME)
             {
                 return;
             }

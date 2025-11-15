@@ -19,7 +19,7 @@ namespace TheTunnel.ScriptDebug
         public void LoadLevel()
         {
             string activeSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-            if (activeSceneName == GameConstant.DUNGEON_SCENE_NAME)
+            if (activeSceneName == GameConstant.SCENE_DUNGEON_NAME)
             {
                 LevelManager.Instance.LoadDungeonLevel(PlayerData.Instance.CurrentLevel);
             }

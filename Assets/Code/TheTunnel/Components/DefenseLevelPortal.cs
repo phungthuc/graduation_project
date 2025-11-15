@@ -13,7 +13,7 @@ namespace TheTunnel.Components
             if (collision.gameObject.tag == GameConstant.PLAYER_TAG)
             {
                 UIController.instance.crosshair.SetVisibility(false);
-                TransitionScene.Instance.PlayTransitionScene(GameConstant.DUNGEON_SCENE_NAME, () => LevelManager.Instance.LoadDungeonLevel(PlayerData.Instance.CurrentLevel));
+                TransitionScene.Instance.PlayTransitionScene(GameConstant.SCENE_DUNGEON_NAME, () => LevelManager.Instance.LoadDungeonLevel(PlayerData.Instance.CurrentLevel));
                 this.enabled = false;
             }
         }
