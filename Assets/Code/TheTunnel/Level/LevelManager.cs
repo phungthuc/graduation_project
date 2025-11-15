@@ -103,7 +103,7 @@ namespace TheTunnel.Level
             }
             _enemyManager.LoadWaveData(levelData.WaveList);
             _isDungeonLevel = false;
-            RegisterDefenseLevelEvents();
+            // RegisterDefenseLevelEvents(); // TODO: Register events after Player spawned
         }
 
         public void StopDefenseLevel()
