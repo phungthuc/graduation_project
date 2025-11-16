@@ -15,6 +15,8 @@ namespace cowsins
     //[RequireComponent(typeof(____))] Player Movement also requires a non trigger collider. Attach your preffered collider method
     public class PlayerMovement : MonoBehaviour
     {
+        #region new
+
 
         #region others
 
@@ -170,7 +172,7 @@ namespace cowsins
 
         [Tooltip("Enable this if your player can jump.")] public bool allowJump;
 
-        [Tooltip("Amount of jumps you can do without touching the ground")] [Min(1)] public int maxJumps;
+        [Tooltip("Amount of jumps you can do without touching the ground")][Min(1)] public int maxJumps;
 
         [Tooltip("Gains jump amounts when wallrunning.")] public bool resetJumpsOnWallrun;
 
@@ -178,7 +180,7 @@ namespace cowsins
 
         [Tooltip("Double jump will reset fall damage, only if your player controller is optable to take fall damage")] public bool doubleJumpResetsFallDamage;
 
-        [Tooltip("Interval between jumping")] [Min(.25f), SerializeField] private float jumpCooldown = .25f;
+        [Tooltip("Interval between jumping")][Min(.25f), SerializeField] private float jumpCooldown = .25f;
 
         [Range(0, .3f), Tooltip("Coyote jump allows users to perform more satisfactory and responsive jumps, especially when jumping off surfaces")] public float coyoteJumpTime;
 
@@ -859,7 +861,7 @@ namespace cowsins
 
             //Handle the camera movement and look based on the inputs received by the user
             float mouseX = (InputManager.mousex * InputManager.sensitivity_x * Time.fixedDeltaTime + InputManager.controllerx * Time.fixedDeltaTime * InputManager.controllerSensitivityX) * inverted * sensM;
-            float mouseY = (InputManager.mousey * InputManager.sensitivity_y * Time.fixedDeltaTime * inverted + InputManager.controllery * Time.fixedDeltaTime * InputManager.controllerSensitivityY * Time.fixedDeltaTime* -inverted) * sensM;
+            float mouseY = (InputManager.mousey * InputManager.sensitivity_y * Time.fixedDeltaTime * inverted + InputManager.controllery * Time.fixedDeltaTime * InputManager.controllerSensitivityY * Time.fixedDeltaTime * -inverted) * sensM;
 
             //Find current look rotation
             Vector3 rot = playerCam.transform.localRotation.eulerAngles;

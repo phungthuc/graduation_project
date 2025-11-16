@@ -2,9 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-#if UNITY_NETCODE_GAMEOBJECTS
 using Unity.Netcode;
-#endif
 
 namespace TheTunnel
 {
@@ -62,26 +60,23 @@ namespace TheTunnel
         #region Private Methods
         private IEnumerator LoadSceneAsync()
         {
-#if UNITY_NETCODE_GAMEOBJECTS
             // Check if NetworkManager exists and is active
             if (IsNetworkActive())
             {
+                Debug.Log("Loading scene network");
                 yield return StartCoroutine(LoadSceneNetwork());
             }
             else
             {
+                Debug.Log("Loading scene local");
                 yield return StartCoroutine(LoadSceneLocal());
             }
-#else
-            yield return StartCoroutine(LoadSceneLocal());
-#endif
         }
 
-#if UNITY_NETCODE_GAMEOBJECTS
         private bool IsNetworkActive()
         {
-            return NetworkManager.Singleton != null && 
-                   NetworkManager.Singleton.IsListening && 
+            return NetworkManager.Singleton != null &&
+                   NetworkManager.Singleton.IsListening &&
                    NetworkManager.Singleton.SceneManager != null;
         }
 
@@ -127,12 +122,11 @@ namespace TheTunnel
 
             // Wait one frame to ensure all objects are initialized
             yield return null;
-            
+
             // Now it's safe to call the callback
             animator.SetTrigger("out");
             _sceneLoadedCallback?.Invoke();
         }
-#endif
 
         private IEnumerator LoadSceneLocal()
         {
