@@ -4,10 +4,11 @@
 using UnityEngine;
 using UnityEngine.Events;
 using cowsins;
+using Unity.Netcode;
 namespace cowsins
 {
     [System.Serializable]
-    public class PlayerStats : MonoBehaviour, IDamageable
+    public class PlayerStats : NetworkBehaviour, IDamageable
     {
         [System.Serializable]
         public class Events
@@ -76,6 +77,7 @@ namespace cowsins
 
         private void Update()
         {
+            if (!IsOwner) return;
             Controllable = controllable;
 
             if (stats.isDead) return; // If player is alive, continue

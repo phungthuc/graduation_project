@@ -3,6 +3,7 @@ using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using System;
 using TMPro;
+using Unity.Netcode;
 namespace cowsins
 {
     /// <summary>
@@ -119,6 +120,8 @@ namespace cowsins
         public virtual void Update()
         {
             if (player == null) return;
+            // Chỉ xử lý input nếu player là Owner (tránh xử lý input cho remote players)
+            if (player is NetworkBehaviour networkPlayer && !networkPlayer.IsOwner) return;
             // Handle all the required inputs here
             if (GameSettingsManager.Instance)
             {

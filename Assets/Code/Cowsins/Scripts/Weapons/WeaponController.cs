@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using cowsins;
 using System.Collections.Generic;
+using Unity.Netcode;
 #if UNITY_EDITOR
 using UnityEditor.Presets;
 #endif
@@ -30,7 +31,7 @@ public class CustomShotMethods
 #endregion
 namespace cowsins
 {
-    public class WeaponController : MonoBehaviour
+    public class WeaponController : NetworkBehaviour
     {
         //References
         [Tooltip("An array that includes all your initial weapons.")] public Weapon_SO[] initialWeapons;
@@ -40,7 +41,7 @@ namespace cowsins
         public UISlot[] slots;
 
         public Weapon_SO weapon;
-        
+
         [Tooltip("Attach your main camera")] public Camera mainCamera;
 
         [Tooltip("Attach your camera pivot object")] public Transform cameraPivot;
@@ -121,7 +122,14 @@ namespace cowsins
 
         RaycastHit hit;
 
-        public int currentWeapon;
+        // Network Variable for current weapon index
+        private NetworkVariable<int> networkCurrentWeapon = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
+
+        public int currentWeapon
+        {
+            get { return networkCurrentWeapon.Value; }
+            private set { if (IsServer) networkCurrentWeapon.Value = value; }
+        }
 
         private AudioClips audioSFX;
 
@@ -129,7 +137,7 @@ namespace cowsins
 
         private PlayerStats stats;
 
-        private WeaponAnimator weaponAnimator; 
+        private WeaponAnimator weaponAnimator;
 
         private GameObject muzzleVFX;
 
@@ -150,7 +158,7 @@ namespace cowsins
         private ReduceAmmo reduceAmmo;
 
         private AudioClip fireSFX;
-        
+
 
         private void OnEnable()
         {
@@ -164,6 +172,34 @@ namespace cowsins
             // Unsubscribe from the method to avoid issues
             UIEvents.onAttachmentUIElementClickedNewAttachment = null;
         }
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
+
+            // Debug log để kiểm tra
+            Debug.Log($"[WeaponController] OnNetworkSpawn - IsOwner: {IsOwner}, OwnerClientId: {OwnerClientId}, LocalClientId: {NetworkManager.Singleton.LocalClientId}");
+
+            // Disable camera rendering cho remote players
+            // KHÔNG disable camera hoàn toàn vì có thể ảnh hưởng đến weapon rendering
+            if (!IsOwner && mainCamera != null)
+            {
+                // Chỉ disable camera rendering (culling mask) thay vì disable hoàn toàn
+                mainCamera.cullingMask = 0; // Không render gì cả
+                Debug.Log("[WeaponController] Remote player camera cullingMask set to 0");
+            }
+            else if (IsOwner && mainCamera != null)
+            {
+                // Đảm bảo camera của owner hoạt động bình thường
+                mainCamera.enabled = true;
+                mainCamera.cullingMask = -1; // Render tất cả
+                Debug.Log($"[WeaponController] Owner camera enabled: {mainCamera.enabled}, cullingMask: {mainCamera.cullingMask}, depth: {mainCamera.depth}");
+            }
+            else if (IsOwner && mainCamera == null)
+            {
+                Debug.LogError("[WeaponController] Owner player but mainCamera is null!");
+            }
+        }
+
         private void Start()
         {
             InitialSettings();
@@ -173,6 +209,8 @@ namespace cowsins
 
         private void Update()
         {
+            if (!IsOwner) return;
+
             HandleUI();
             HandleAimingMotion();
             ManageWeaponMethodsInputs();
@@ -183,6 +221,7 @@ namespace cowsins
         private float aimingSpeed;
         public void Aim()
         {
+            if (!IsOwner) return;
             if (!isAiming) events.OnAim.Invoke(); // Invoke your custom method on stop aiming
 
             isAiming = true;
@@ -202,6 +241,7 @@ namespace cowsins
 
         public void StopAim()
         {
+            if (!IsOwner) return;
             if (weapon != null && weapon.applyBulletSpread) spread = weapon.spreadAmount;
 
             if (isAiming) events.OnStopAim.Invoke(); // Invoke your custom method on stop aiming
@@ -252,29 +292,97 @@ namespace cowsins
 
         public void HandleHitscanProjectileShot()
         {
-            foreach (var p in firePoint)
-            {
-                canShoot = false; // since you have already shot, you will have to wait in order to being able to shoot again
-                bulletsPerFire = weapon.bulletsPerFire;
-                StartCoroutine(HandleShooting());
+            if (!IsOwner) return;
+            if (mainCamera == null) return;
 
-                // Adding a layer of realism, bullet shells get instantiated and interact with the world
-                // We should  first check if we really wanna do this
-                if (weapon.showBulletShells && (int)weapon.shootStyle != 2)
-                {
-                    var bulletShell = Instantiate(weapon.bulletGraphics, p.position, mainCamera.transform.rotation);
-                    Rigidbody shellRigidbody = bulletShell.GetComponent<Rigidbody>();
-                    float torque = Random.Range(-15f, 15f);
-                    Vector3 shellForce = mainCamera.transform.right * 5 + mainCamera.transform.up * 5;
-                    shellRigidbody.AddTorque(mainCamera.transform.right * torque, ForceMode.Impulse);
-                    shellRigidbody.AddForce(shellForce, ForceMode.Impulse);
-                }
+            // Truyền camera position và forward direction từ client lên server
+            Vector3 cameraPosition = mainCamera.transform.position;
+            Vector3 cameraForward = mainCamera.transform.forward;
+            Vector3 cameraRight = mainCamera.transform.right;
+            Vector3 cameraUp = mainCamera.transform.up;
+
+            // Call ServerRpc to handle shooting on server
+            ShootServerRpc(cameraPosition, cameraForward, cameraRight, cameraUp);
+        }
+
+        [ServerRpc]
+        private void ShootServerRpc(Vector3 cameraPos, Vector3 cameraForward, Vector3 cameraRight, Vector3 cameraUp)
+        {
+            if (!canShoot) return; // Prevent multiple shots
+
+            canShoot = false; // since you have already shot, you will have to wait in order to being able to shoot again
+            bulletsPerFire = weapon.bulletsPerFire;
+
+            // Store camera data for use in shooting
+            storedCameraPosition = cameraPos;
+            storedCameraForward = cameraForward;
+            storedCameraRight = cameraRight;
+            storedCameraUp = cameraUp;
+
+            StartCoroutine(HandleShooting());
+
+            // Adding a layer of realism, bullet shells get instantiated and interact with the world
+            // Spawn bullet shells via ClientRpc - chỉ cho owner
+            if (weapon.showBulletShells && (int)weapon.shootStyle != 2)
+            {
+                SpawnBulletShellsClientRpc(cameraPos, cameraRight, cameraUp);
             }
-            if (weapon.timeBetweenShots == 0) SoundManager.Instance.PlaySound(fireSFX, 0, weapon.pitchVariationFiringSFX, true, 0);
+
+            if (weapon.timeBetweenShots == 0)
+            {
+                PlayFireSoundClientRpc();
+            }
+
             Invoke(nameof(CanShoot), fireRate);
         }
 
-        public void HandleMeleeShot() => StartCoroutine(HandleMeleeShotCoroutine());
+        // Store camera data for server-side shooting
+        private Vector3 storedCameraPosition;
+        private Vector3 storedCameraForward;
+        private Vector3 storedCameraRight;
+        private Vector3 storedCameraUp;
+
+        [ClientRpc]
+        private void SpawnBulletShellsClientRpc(Vector3 cameraPos, Vector3 cameraRight, Vector3 cameraUp)
+        {
+            if (firePoint == null) return;
+            // Tính toán camera forward từ right và up
+            Vector3 cameraForward = Vector3.Cross(cameraRight, cameraUp);
+            foreach (var p in firePoint)
+            {
+                var bulletShell = Instantiate(weapon.bulletGraphics, p.position, Quaternion.LookRotation(cameraForward, cameraUp));
+                Rigidbody shellRigidbody = bulletShell.GetComponent<Rigidbody>();
+                if (shellRigidbody != null)
+                {
+                    float torque = Random.Range(-15f, 15f);
+                    Vector3 shellForce = cameraRight * 5 + cameraUp * 5;
+                    shellRigidbody.AddTorque(cameraRight * torque, ForceMode.Impulse);
+                    shellRigidbody.AddForce(shellForce, ForceMode.Impulse);
+                }
+            }
+        }
+
+        [ClientRpc]
+        private void PlayFireSoundClientRpc()
+        {
+            if (mainCamera != null && fireSFX != null)
+            {
+                SoundManager.Instance.PlaySound(fireSFX, 0, weapon.pitchVariationFiringSFX, true, 0);
+            }
+        }
+
+        public void HandleMeleeShot()
+        {
+            if (!IsOwner) return;
+            MeleeShotServerRpc();
+        }
+
+        [ServerRpc]
+        private void MeleeShotServerRpc()
+        {
+            StartCoroutine(HandleMeleeShotCoroutine());
+        }
+
         private IEnumerator HandleMeleeShotCoroutine()
         {
             canShoot = false;
@@ -302,9 +410,25 @@ namespace cowsins
             MeleeAttack(weapon.attackRange, weapon.damagePerHit);
             CamShake.instance.ShootShake(weapon.camShakeAmount * aimingCamShakeMultiplier * crouchingCamShakeMultiplier);
             Invoke(nameof(CanShoot), weapon.attackRate);
+
+            // Notify clients about melee effects
+            MeleeShotClientRpc();
+        }
+
+        [ClientRpc]
+        private void MeleeShotClientRpc()
+        {
+            // Additional client-side effects if needed
         }
 
         public void CustomShot()
+        {
+            if (!IsOwner) return;
+            CustomShotServerRpc();
+        }
+
+        [ServerRpc]
+        private void CustomShotServerRpc()
         {
             // If we want to use fire Rate
             if (!weapon.continuousFire)
@@ -315,6 +439,14 @@ namespace cowsins
 
             // Continuous fire
             customMethod?.Invoke();
+
+            CustomShotClientRpc();
+        }
+
+        [ClientRpc]
+        private void CustomShotClientRpc()
+        {
+            // Additional client-side effects if needed
         }
         private void SelectCustomShotMethod()
         {
@@ -348,22 +480,8 @@ namespace cowsins
                 if (weapon == null) yield break;
                 shooting = true;
 
-                CamShake.instance.ShootShake(camShakeAmount * aimingCamShakeMultiplier * crouchingCamShakeMultiplier);
-                if (weapon.useProceduralShot) ProceduralShot.Instance.Shoot(weapon.proceduralShotPattern);
-
-                // Determine if we want to add an effect for FOV
-                if (weapon.applyFOVEffectOnShooting)
-                {
-                    float fovAdjustment = isAiming ? weapon.AimingFOVValueToSubtract : weapon.FOVValueToSubtract;
-                    mainCamera.fieldOfView -= fovAdjustment;
-                }
-                foreach (var p in firePoint)
-                {
-                    if (muzzleVFX != null)
-                        Instantiate(muzzleVFX, p.position, mainCamera.transform.rotation, mainCamera.transform); // VFX
-                }
-                CowsinsUtilities.ForcePlayAnim("shooting", inventory[currentWeapon].GetComponentInChildren<Animator>());
-                if (weapon.timeBetweenShots != 0) SoundManager.Instance.PlaySound(fireSFX, 0, weapon.pitchVariationFiringSFX, true, 0);
+                // Send visual/audio effects to all clients
+                ShootEffectsClientRpc();
 
                 ProgressRecoil();
 
@@ -380,20 +498,75 @@ namespace cowsins
             shooting = false;
             yield break;
         }
+
+        [ClientRpc]
+        private void ShootEffectsClientRpc()
+        {
+            // Chỉ hiển thị effects nếu có camera và weapon
+            // VÀ chỉ hiển thị cho owner của weapon này (người đang bắn)
+            if (!IsOwner) return; // CHỈ owner mới thấy effects của chính họ
+
+            if (mainCamera == null || weapon == null || inventory == null || currentWeapon < 0 || currentWeapon >= inventory.Length || inventory[currentWeapon] == null) return;
+
+            // Visual and audio effects chỉ cho owner
+            if (CamShake.instance != null)
+                CamShake.instance.ShootShake(camShakeAmount * aimingCamShakeMultiplier * crouchingCamShakeMultiplier);
+            if (weapon.useProceduralShot && ProceduralShot.Instance != null)
+                ProceduralShot.Instance.Shoot(weapon.proceduralShotPattern);
+
+            // Determine if we want to add an effect for FOV (only on owner)
+            if (weapon.applyFOVEffectOnShooting && mainCamera != null)
+            {
+                float fovAdjustment = isAiming ? weapon.AimingFOVValueToSubtract : weapon.FOVValueToSubtract;
+                mainCamera.fieldOfView -= fovAdjustment;
+            }
+
+            if (firePoint != null)
+            {
+                foreach (var p in firePoint)
+                {
+                    if (muzzleVFX != null && mainCamera != null)
+                        Instantiate(muzzleVFX, p.position, mainCamera.transform.rotation, mainCamera.transform); // VFX
+                }
+            }
+
+            Animator weaponAnimator = inventory[currentWeapon].GetComponentInChildren<Animator>();
+            if (weaponAnimator != null)
+                CowsinsUtilities.ForcePlayAnim("shooting", weaponAnimator);
+
+            if (weapon.timeBetweenShots != 0 && fireSFX != null && SoundManager.Instance != null)
+                SoundManager.Instance.PlaySound(fireSFX, 0, weapon.pitchVariationFiringSFX, true, 0);
+        }
         /// <summary>
         /// Hitscan weapons send a raycast that IMMEDIATELY hits the target.
         /// That is why this shooting method is mostly used for pistols, snipers, rifles or SMGs
         /// </summary>
         private void HitscanShot()
         {
-            events.OnShoot.Invoke();
-            if (resizeCrosshair && UIController.instance.crosshair != null) UIController.instance.crosshair.Resize(weapon.crosshairResize * 100);
+            // Sử dụng camera data đã được lưu từ client
+            if (storedCameraPosition == Vector3.zero || storedCameraForward == Vector3.zero) return;
+
+            // UI updates should only happen on owner client
+            if (IsOwner)
+            {
+                events.OnShoot.Invoke();
+                if (resizeCrosshair && UIController.instance != null && UIController.instance.crosshair != null)
+                    UIController.instance.crosshair.Resize(weapon.crosshairResize * 100);
+            }
 
             Transform hitObj;
 
-            //This defines the first hit on the object
-            Vector3 dir = CowsinsUtilities.GetSpreadDirection(spread, mainCamera);
-            Ray ray = new Ray(mainCamera.transform.position, dir);
+            // Luôn tính toán spread direction từ camera data đã lưu (từ client)
+            // Tính toán spread tương tự như GetSpreadDirection nhưng không cần camera object
+            float horSpread = Random.Range(-spread, spread);
+            float verSpread = Random.Range(-spread, spread);
+
+            // Tính toán spread direction trong local space của camera
+            // Sử dụng camera right và up vectors đã lưu
+            Vector3 spreadOffset = storedCameraRight * horSpread + storedCameraUp * verSpread;
+            Vector3 dir = (storedCameraForward + spreadOffset).normalized;
+
+            Ray ray = new Ray(storedCameraPosition, dir);
 
             if (Physics.Raycast(ray, out hit, weapon.bulletRange, hitLayer))
             {
@@ -419,35 +592,44 @@ namespace cowsins
                     }
                 }
 
-                // Handle Bullet Trails
-                if (weapon.bulletTrail == null) return;
-
-                foreach (var p in firePoint)
+                // Handle Bullet Trails - spawn on all clients via ClientRpc
+                if (weapon.bulletTrail != null)
                 {
-                    TrailRenderer trail = Instantiate(weapon.bulletTrail, p.position, Quaternion.identity);
-
-                    StartCoroutine(SpawnTrail(trail, hit));
+                    SpawnBulletTrailClientRpc(hit.point);
                 }
             }
         }
 
-        private IEnumerator SpawnTrail(TrailRenderer trail, RaycastHit hit)
+        [ClientRpc]
+        private void SpawnBulletTrailClientRpc(Vector3 hitPoint)
+        {
+            if (mainCamera == null || firePoint == null) return;
+            foreach (var p in firePoint)
+            {
+                TrailRenderer trail = Instantiate(weapon.bulletTrail, p.position, Quaternion.identity);
+                StartCoroutine(SpawnTrail(trail, hitPoint));
+            }
+        }
+
+
+        private IEnumerator SpawnTrail(TrailRenderer trail, Vector3 hitPoint)
         {
             float time = 0;
             Vector3 startPos = trail.transform.position;
 
             while (time < 1)
             {
-                trail.transform.position = Vector3.Lerp(startPos, hit.point, time);
+                trail.transform.position = Vector3.Lerp(startPos, hitPoint, time);
                 time += Time.deltaTime / trail.time;
 
                 yield return null;
             }
 
-            trail.transform.position = hit.point;
+            trail.transform.position = hitPoint;
 
             Destroy(trail.gameObject, trail.time);
         }
+
         /// <summary>
         /// projectile shooting spawns a projectile
         /// Add a rigidbody to your bullet gameObject to make a curved trajectory
@@ -490,7 +672,7 @@ namespace cowsins
             events.OnShoot.Invoke();
 
             Vector3 basePosition = id != null ? id.transform.position : transform.position;
-           Collider[] col = Physics.OverlapSphere(basePosition + mainCamera.transform.parent.forward * attackRange / 2, attackRange, hitLayer);
+            Collider[] col = Physics.OverlapSphere(basePosition + mainCamera.transform.parent.forward * attackRange / 2, attackRange, hitLayer);
 
             float dmg = damage * stats.damageMultiplier;
 
@@ -622,7 +804,24 @@ namespace cowsins
 
         private void FinishedSelection() => selectingWeapon = false;
 
-        public void StartReload() => StartCoroutine(reload());
+        public void StartReload()
+        {
+            if (!IsOwner) return;
+            StartReloadServerRpc();
+        }
+
+        [ServerRpc]
+        private void StartReloadServerRpc()
+        {
+            StartCoroutine(reload());
+            StartReloadClientRpc();
+        }
+
+        [ClientRpc]
+        private void StartReloadClientRpc()
+        {
+            // Additional client-side reload effects if needed
+        }
 
         /// <summary>
         /// Handle Reloading
@@ -954,6 +1153,8 @@ namespace cowsins
 
         private void HandleUI()
         {
+            // Only update UI on owner
+            if (!IsOwner) return;
             // If we dont own a weapon yet, do not continue
             if (weapon == null)
             {
@@ -1027,6 +1228,7 @@ namespace cowsins
         /// </summary>
         public void HandleInventory()
         {
+            if (!IsOwner) return;
             if (InputManager.reloading) return; // Do not change weapons while reloading
                                                 // Change slot
             if (InputManager.scrolling > 0 || InputManager.previousweapon)
@@ -1208,7 +1410,7 @@ namespace cowsins
             weapon = null;
             slots[currentWeapon].weapon = null;
         }
-        
+
         private float GetDistanceDamageReduction(Transform target)
         {
             if (!weapon.applyDamageReductionBasedOnDistance) return 1;
@@ -1219,12 +1421,14 @@ namespace cowsins
 
         private void ManageWeaponMethodsInputs()
         {
+            if (!IsOwner) return;
             if (!InputManager.shooting) holding = false; // Making sure we are not holding}
         }
 
         private float evaluationProgress, evaluationProgressX;
         private void HandleRecoil()
         {
+            if (!IsOwner) return;
             if (weapon == null || !weapon.applyRecoil)
             {
                 cameraPivot.localRotation = Quaternion.Lerp(cameraPivot.localRotation, Quaternion.Euler(Vector3.zero), 3 * Time.deltaTime);
@@ -1262,6 +1466,13 @@ namespace cowsins
 
         public void ToggleFlashLight()
         {
+            if (!IsOwner) return;
+            ToggleFlashLightServerRpc();
+        }
+
+        [ServerRpc]
+        private void ToggleFlashLightServerRpc()
+        {
             Flashlight flashlightComponent = inventory[currentWeapon].flashlight.GetComponent<Flashlight>();
 
             GameObject lightSource = flashlightComponent.lightSource.gameObject;
@@ -1272,11 +1483,27 @@ namespace cowsins
 
             AudioClip soundToPlay = newLightState ? flashlightComponent.turnOnSFX : flashlightComponent.turnOffSFX;
             SoundManager.Instance.PlaySound(soundToPlay, 0, 0, true, 0);
+
+            ToggleFlashLightClientRpc(newLightState);
         }
 
-        public void InitializeInspection() => CowsinsUtilities.PlayAnim("inspect", inventory[currentWeapon].GetComponentInChildren<Animator>());
+        [ClientRpc]
+        private void ToggleFlashLightClientRpc(bool newLightState)
+        {
+            // Additional client-side effects if needed
+        }
 
-        public void DisableInspection() => CowsinsUtilities.PlayAnim("finishedInspect", inventory[currentWeapon].GetComponentInChildren<Animator>());
+        public void InitializeInspection()
+        {
+            if (!IsOwner) return;
+            CowsinsUtilities.PlayAnim("inspect", inventory[currentWeapon].GetComponentInChildren<Animator>());
+        }
+
+        public void DisableInspection()
+        {
+            if (!IsOwner) return;
+            CowsinsUtilities.PlayAnim("finishedInspect", inventory[currentWeapon].GetComponentInChildren<Animator>());
+        }
 
         private void InitialSettings()
         {
@@ -1285,16 +1512,24 @@ namespace cowsins
             inventory = new WeaponIdentification[inventorySize];
             currentWeapon = 0;
             canShoot = true;
-            mainCamera.fieldOfView = GetComponent<PlayerMovement>().normalFOV;
+            // Chỉ set FOV nếu camera tồn tại (không cần check enabled vì có thể chưa được enable lúc này)
+            if (mainCamera != null)
+            {
+                PlayerMovement pm = GetComponent<PlayerMovement>();
+                if (pm != null)
+                {
+                    mainCamera.fieldOfView = pm.normalFOV;
+                }
+            }
             CanMelee = true;
         }
-        
+
         public void HideCurrentWeapon()
         {
             weapon = null;
             inventory[currentWeapon]?.gameObject.SetActive(false);
         }
-        
+
         public void ShowCurrentWeapon()
         {
             if (inventory[currentWeapon] == null)

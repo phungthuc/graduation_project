@@ -5,7 +5,7 @@ namespace cowsins
     {
         [SerializeField] private Transform player;
 
-        [SerializeField] private Transform orientation; 
+        [SerializeField] private Transform orientation;
         private void Update()
         {
             transform.position = player.position;

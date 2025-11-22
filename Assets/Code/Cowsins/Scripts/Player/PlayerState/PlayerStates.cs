@@ -1,7 +1,8 @@
 using UnityEngine;
+using Unity.Netcode;
 namespace cowsins
 {
-    public class PlayerStates : MonoBehaviour
+    public class PlayerStates : NetworkBehaviour
     {
         protected PlayerBaseState _currentState;
         protected PlayerStateFactory _states;
@@ -29,11 +30,13 @@ namespace cowsins
 
         private void Update()
         {
+            if (!IsOwner) return;
             _currentState.UpdateState();
         }
 
         private void FixedUpdate()
         {
+            if (!IsOwner) return;
             _currentState.FixedUpdateState();
         }
 

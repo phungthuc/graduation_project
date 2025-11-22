@@ -7,13 +7,14 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Events;
+using Unity.Netcode;
 
 namespace cowsins
 {
     // Add a rigidbody if needed, PlayerMovement.cs requires a rigidbody to work 
     [RequireComponent(typeof(Rigidbody))]
     //[RequireComponent(typeof(____))] Player Movement also requires a non trigger collider. Attach your preffered collider method
-    public class PlayerMovement : MonoBehaviour
+    public class PlayerMovement : NetworkBehaviour
     {
         #region new
 
@@ -67,6 +68,9 @@ namespace cowsins
         private float xRotation;
 
         private float desiredX;
+
+        // Network variable để sync rotation của Camera (yaw) - vì tất cả player visuals (súng, cánh tay) nằm trong Camera
+        private NetworkVariable<float> networkDesiredX = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
 
         //Movements
@@ -478,6 +482,214 @@ namespace cowsins
         #endregion
 
         private void OnEnable() => GetAllReferences();
+
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
+
+            // Debug log để kiểm tra
+            Debug.Log($"[PlayerMovement] OnNetworkSpawn - IsOwner: {IsOwner}, OwnerClientId: {OwnerClientId}, LocalClientId: {NetworkManager.Singleton.LocalClientId}, IsServer: {IsServer}, IsClient: {IsClient}");
+
+            // Subscribe to network variable changes để cập nhật Camera rotation cho remote players
+            // Vì tất cả player visuals (súng, cánh tay) nằm trong Camera, nên cần sync Camera rotation
+            if (!IsOwner)
+            {
+                networkDesiredX.OnValueChanged += OnDesiredXChanged;
+                // Áp dụng giá trị ban đầu nếu có
+                if (playerCam != null)
+                {
+                    Vector3 currentEuler = playerCam.transform.localRotation.eulerAngles;
+                    playerCam.transform.localRotation = Quaternion.Euler(currentEuler.x, networkDesiredX.Value, currentEuler.z);
+                }
+            }
+
+            // Chỉ set player trong InputManager nếu đây là Owner
+            if (IsOwner)
+            {
+                Debug.Log("[PlayerMovement] Setting up Owner player - InputManager and Camera");
+
+                // Đảm bảo InputManager tồn tại
+                if (InputManager.inputManager == null)
+                    Instantiate(Resources.Load("InputManager"));
+                InputManager.inputManager.SetPlayer(this);
+                Debug.Log($"[PlayerMovement] InputManager set - player reference: {InputManager.inputManager != null}");
+
+                // Enable camera cho owner - ĐẢM BẢO camera được enable
+                // Dựa trên cấu trúc: playerCam/CameraPivot/CameraContainer/Main Camera
+                Camera cam = null;
+                if (playerCam != null)
+                {
+                    // Thử tìm camera component trên chính playerCam
+                    cam = playerCam.GetComponent<Camera>();
+
+                    // Nếu không có, tìm "Main Camera" trong children (theo cấu trúc)
+                    if (cam == null)
+                    {
+                        // Tìm theo đường dẫn: CameraPivot/CameraContainer/Main Camera
+                        Transform cameraPivot = playerCam.Find("CameraPivot");
+                        if (cameraPivot != null)
+                        {
+                            Transform cameraContainer = cameraPivot.Find("CameraContainer");
+                            if (cameraContainer != null)
+                            {
+                                Transform mainCameraTransform = cameraContainer.Find("Main Camera");
+                                if (mainCameraTransform != null)
+                                {
+                                    cam = mainCameraTransform.GetComponent<Camera>();
+                                }
+                            }
+                        }
+                    }
+
+                    // Nếu vẫn không có, tìm tất cả cameras trong children và chọn "Main Camera"
+                    if (cam == null)
+                    {
+                        Camera[] allCameras = playerCam.GetComponentsInChildren<Camera>(true);
+                        foreach (Camera c in allCameras)
+                        {
+                            if (c.gameObject.name == "Main Camera")
+                            {
+                                cam = c;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Nếu vẫn không có, lấy camera đầu tiên tìm thấy
+                    if (cam == null)
+                    {
+                        cam = playerCam.GetComponentInChildren<Camera>(true);
+                    }
+
+                    // Nếu vẫn không có, thử dùng mainCamera từ WeaponController
+                    if (cam == null && weaponController != null)
+                    {
+                        cam = weaponController.mainCamera;
+                    }
+
+                    if (cam != null)
+                    {
+                        // Đảm bảo GameObject của camera được active
+                        if (!cam.gameObject.activeInHierarchy)
+                        {
+                            cam.gameObject.SetActive(true);
+                        }
+
+                        cam.enabled = true;
+                        cam.cullingMask = -1; // Render tất cả
+                        // Đảm bảo camera có depth phù hợp để render đúng
+                        if (cam.depth < 0) cam.depth = 0;
+
+                        // Đảm bảo camera là main camera hoặc có tag MainCamera
+                        if (Camera.main != cam && !cam.CompareTag("MainCamera"))
+                        {
+                            cam.tag = "MainCamera";
+                        }
+
+                        Debug.Log($"[PlayerMovement] Owner Camera found: {cam.gameObject.name}, path: {GetGameObjectPath(cam.gameObject)}, enabled: {cam.enabled}, cullingMask: {cam.cullingMask}, depth: {cam.depth}, activeInHierarchy: {cam.gameObject.activeInHierarchy}");
+                    }
+                    else
+                    {
+                        Debug.LogError("[PlayerMovement] Could not find Camera component! playerCam path: " + (playerCam != null ? playerCam.name : "null"));
+                    }
+                }
+                else
+                {
+                    Debug.LogError("[PlayerMovement] playerCam is null!");
+                }
+            }
+            else
+            {
+                Debug.Log($"[PlayerMovement] Setting up Remote player (not owner) - Disabling camera rendering");
+
+                // Disable camera rendering cho remote players (không disable hoàn toàn)
+                if (playerCam != null)
+                {
+                    // Tìm camera component theo cấu trúc: playerCam/CameraPivot/CameraContainer/Main Camera
+                    Camera cam = playerCam.GetComponent<Camera>();
+
+                    if (cam == null)
+                    {
+                        // Tìm theo đường dẫn: CameraPivot/CameraContainer/Main Camera
+                        Transform cameraPivot = playerCam.Find("CameraPivot");
+                        if (cameraPivot != null)
+                        {
+                            Transform cameraContainer = cameraPivot.Find("CameraContainer");
+                            if (cameraContainer != null)
+                            {
+                                Transform mainCameraTransform = cameraContainer.Find("Main Camera");
+                                if (mainCameraTransform != null)
+                                {
+                                    cam = mainCameraTransform.GetComponent<Camera>();
+                                }
+                            }
+                        }
+                    }
+
+                    if (cam == null)
+                    {
+                        // Tìm tất cả cameras và chọn "Main Camera"
+                        Camera[] allCameras = playerCam.GetComponentsInChildren<Camera>(true);
+                        foreach (Camera c in allCameras)
+                        {
+                            if (c.gameObject.name == "Main Camera")
+                            {
+                                cam = c;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (cam == null)
+                    {
+                        cam = playerCam.GetComponentInChildren<Camera>(true);
+                    }
+
+                    if (cam == null && weaponController != null)
+                    {
+                        cam = weaponController.mainCamera;
+                    }
+
+                    if (cam != null)
+                    {
+                        cam.cullingMask = 0; // Không render gì cả, nhưng vẫn giữ camera enabled
+                    }
+                }
+            }
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            base.OnNetworkDespawn();
+
+            // Unsubscribe from network variable changes
+            if (!IsOwner)
+            {
+                networkDesiredX.OnValueChanged -= OnDesiredXChanged;
+            }
+
+            // Clear player reference khi despawn
+            if (IsOwner && InputManager.inputManager != null)
+            {
+                InputManager.inputManager.SetPlayer(null);
+            }
+        }
+
+        /// <summary>
+        /// Callback khi networkDesiredX thay đổi - áp dụng Camera rotation cho remote players
+        /// Vì tất cả player visuals (súng, cánh tay) nằm trong Camera, nên cần sync Camera rotation
+        /// </summary>
+        private void OnDesiredXChanged(float previousValue, float newValue)
+        {
+            if (!IsOwner && playerCam != null)
+            {
+                // Sync rotation của Camera (yaw only, giữ pitch và roll)
+                Vector3 currentEuler = playerCam.transform.localRotation.eulerAngles;
+                playerCam.transform.localRotation = Quaternion.Euler(currentEuler.x, newValue, currentEuler.z);
+                Debug.Log($"[PlayerMovement] Applied Camera rotation (yaw): {newValue}, full rotation: {playerCam.transform.localRotation.eulerAngles}");
+            }
+        }
+
         private void Start()
         {
 
@@ -499,6 +711,7 @@ namespace cowsins
 
         private void FixedUpdate()
         {
+            if (!IsOwner) return;
             // Added Gravity
             // Gravity is added only if we are not on a slope or climbing to prevent unvoluntary sliding
             if ((!IsPlayerOnSlope() || (IsPlayerOnSlope() && rb.linearVelocity.y < 0)) && !isClimbing) rb.AddForce(Vector3.down * 30.19f, ForceMode.Acceleration);
@@ -519,6 +732,7 @@ namespace cowsins
 
         private void Update()
         {
+            if (!IsOwner) return;
             CheckGroundedWithRaycast();
 
             if (canWallBounce) CheckOppositeWall();
@@ -854,6 +1068,7 @@ namespace cowsins
         /// </summary>
         public void Look()
         {
+            if (!IsOwner) return;
 
             int inverted = (InputManager.invertedAxis) ? -1 : 1;
 
@@ -877,6 +1092,17 @@ namespace cowsins
             playerCam.transform.localRotation = Quaternion.Euler(xRotation, desiredX, cameraTilt); // the camera parent
             orientation.transform.localRotation = Quaternion.Euler(0, desiredX, 0); // the orientation
 
+            // Sync Camera rotation qua network cho remote players (chỉ Owner mới có thể write)
+            // Vì tất cả player visuals (súng, cánh tay) nằm trong Camera, nên cần sync Camera rotation
+            if (IsOwner)
+            {
+                // Chỉ update nếu giá trị thay đổi đáng kể (tránh spam network)
+                if (Mathf.Abs(networkDesiredX.Value - desiredX) > 0.1f)
+                {
+                    networkDesiredX.Value = desiredX;
+                }
+            }
+
             // Decide wether to use aim assist or not
             if (!applyAimAssist) return;
             if (AimAssistHit() == null || target == null || Vector3.Distance(target.position, transform.position) > maximumDistanceToAssistAim) return;
@@ -889,6 +1115,7 @@ namespace cowsins
 
         public void VerticalLook()
         {
+            if (!IsOwner) return;
             if (!allowVerticalLookWhileClimbing || PauseMenu.isPaused) return;
 
             int inverted = (InputManager.invertedAxis) ? -1 : 1;
@@ -998,14 +1225,6 @@ namespace cowsins
         /// </summary>
         void GetAllReferences()
         {
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
-
-            // We check if there is already an input manager before instantiating a new one
-            // in order to prevent errors regarding inputs not being received.
-            if (InputManager.inputManager == null)
-                Instantiate(Resources.Load("InputManager"));
-            InputManager.inputManager.SetPlayer(this);
             rb = GetComponent<Rigidbody>();
             _audio = GetComponent<AudioSource>();
             weaponController = GetComponent<WeaponController>();
@@ -1014,6 +1233,37 @@ namespace cowsins
             playerCollider = GetComponent<Collider>();
             if (allowGrapple)
                 grappleRenderer = GetComponent<LineRenderer>();
+
+            // Chỉ lock cursor và set InputManager nếu đây là Owner
+            // Lưu ý: IsOwner có thể chưa được set lúc OnEnable, nên sẽ set trong OnNetworkSpawn
+            // Nhưng vẫn cần check ở đây để tránh lỗi
+            if (IsOwner)
+            {
+                Cursor.lockState = CursorLockMode.Locked;
+                Cursor.visible = false;
+
+                // We check if there is already an input manager before instantiating a new one
+                // in order to prevent errors regarding inputs not being received.
+                if (InputManager.inputManager == null)
+                    Instantiate(Resources.Load("InputManager"));
+                // Note: SetPlayer sẽ được gọi trong OnNetworkSpawn để đảm bảo đúng thời điểm
+            }
+        }
+
+        /// <summary>
+        /// Helper method to get full path of GameObject for debugging
+        /// </summary>
+        private string GetGameObjectPath(GameObject obj)
+        {
+            if (obj == null) return "null";
+            string path = obj.name;
+            Transform current = obj.transform.parent;
+            while (current != null)
+            {
+                path = current.name + "/" + path;
+                current = current.parent;
+            }
+            return path;
         }
 
         private bool cancellingGrounded;
@@ -1409,4 +1659,5 @@ namespace cowsins
             playerCam.rotation = rotation;
         }
     }
+    #endregion
 }

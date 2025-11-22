@@ -1,8 +1,9 @@
 using UnityEngine;
+using Unity.Netcode;
 
 namespace cowsins
 {
-    public class CameraEffects : MonoBehaviour
+    public class CameraEffects : NetworkBehaviour
     {
 
         [SerializeField] private Transform playerCamera;
@@ -31,6 +32,7 @@ namespace cowsins
 
         private void Update()
         {
+            if (!IsOwner) return;
             if (!PlayerStats.Controllable) return;
 
             UpdateTilt();

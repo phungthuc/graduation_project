@@ -5,10 +5,11 @@ using UnityEngine;
 using UnityEngine.Events;
 using System;
 using System.Collections.Generic;
+using Unity.Netcode;
 
 namespace cowsins
 {
-    public class InteractManager : MonoBehaviour
+    public class InteractManager : NetworkBehaviour
     {
         [System.Serializable]
         public class Events { public UnityEvent OnFinishedInteraction, onDrop; }
@@ -86,6 +87,7 @@ namespace cowsins
 
         protected virtual void Update()
         {
+            if (!IsOwner) return;
             // If we already interacted, or the player is not controllable, return!
             if (alreadyInteracted || !PlayerStats.Controllable) return;
 
@@ -197,6 +199,7 @@ namespace cowsins
 
         protected virtual void PerformInteraction()
         {
+            if (!IsOwner) return;
             progressElapsed = -.01f;
             // prevent from spamming
             alreadyInteracted = true;
@@ -214,17 +217,31 @@ namespace cowsins
         }
         private void HandleDrop()
         {
+            if (!IsOwner) return;
             // Handles weapon dropping by pressing the drop button
             if (!InputManager.dropping || wcon.weapon == null || wcon.Reloading || !canDrop) return;
 
+            DropWeaponServerRpc();
+        }
+
+        [ServerRpc]
+        private void DropWeaponServerRpc()
+        {
             WeaponPickeable pick = Instantiate(weaponGenericPickeable, orientation.position + orientation.forward * droppingDistance, orientation.rotation) as WeaponPickeable;
             pick.Drop(wcon, orientation);
             WeaponIdentification wp = wcon.inventory[wcon.currentWeapon];
             pick.SetPickeableAttachments(wp.barrel, wp.scope, wp.stock, wp.grip, wp.magazine, wp.flashlight, wp.laser);
-            events.onDrop?.Invoke();
-
+            
             wcon.ForceAimReset();
             wcon.ReleaseCurrentWeapon();
+            
+            DropWeaponClientRpc();
+        }
+
+        [ClientRpc]
+        private void DropWeaponClientRpc()
+        {
+            events.onDrop?.Invoke();
         }
         protected void ResetInteractTimer() => alreadyInteracted = false;
 
