@@ -69,8 +69,11 @@ namespace cowsins
 
         private float desiredX;
 
-        // Network variable để sync rotation của Camera (yaw) - vì tất cả player visuals (súng, cánh tay) nằm trong Camera
+        // Network variables để sync rotation của Camera theo mọi trục (x, y, z)
+        // Vì tất cả player visuals (súng, cánh tay) nằm trong Camera, nên cần sync Camera rotation
         private NetworkVariable<float> networkDesiredX = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        private NetworkVariable<float> networkXRotation = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        private NetworkVariable<float> networkCameraTilt = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
 
         //Movements
@@ -487,32 +490,34 @@ namespace cowsins
         {
             base.OnNetworkSpawn();
 
-            // Debug log để kiểm tra
-            Debug.Log($"[PlayerMovement] OnNetworkSpawn - IsOwner: {IsOwner}, OwnerClientId: {OwnerClientId}, LocalClientId: {NetworkManager.Singleton.LocalClientId}, IsServer: {IsServer}, IsClient: {IsClient}");
-
             // Subscribe to network variable changes để cập nhật Camera rotation cho remote players
             // Vì tất cả player visuals (súng, cánh tay) nằm trong Camera, nên cần sync Camera rotation
             if (!IsOwner)
             {
+                // QUAN TRỌNG: Unsubscribe trước để tránh duplicate subscriptions (memory leak)
+                networkDesiredX.OnValueChanged -= OnDesiredXChanged;
+                networkXRotation.OnValueChanged -= OnXRotationChanged;
+                networkCameraTilt.OnValueChanged -= OnCameraTiltChanged;
+
+                // Subscribe lại
                 networkDesiredX.OnValueChanged += OnDesiredXChanged;
-                // Áp dụng giá trị ban đầu nếu có
+                networkXRotation.OnValueChanged += OnXRotationChanged;
+                networkCameraTilt.OnValueChanged += OnCameraTiltChanged;
+
+                // Áp dụng rotation ban đầu cho remote players (tất cả 3 trục)
                 if (playerCam != null)
                 {
-                    Vector3 currentEuler = playerCam.transform.localRotation.eulerAngles;
-                    playerCam.transform.localRotation = Quaternion.Euler(currentEuler.x, networkDesiredX.Value, currentEuler.z);
+                    playerCam.transform.localRotation = Quaternion.Euler(networkXRotation.Value, networkDesiredX.Value, networkCameraTilt.Value);
                 }
             }
 
             // Chỉ set player trong InputManager nếu đây là Owner
             if (IsOwner)
             {
-                Debug.Log("[PlayerMovement] Setting up Owner player - InputManager and Camera");
-
                 // Đảm bảo InputManager tồn tại
                 if (InputManager.inputManager == null)
                     Instantiate(Resources.Load("InputManager"));
                 InputManager.inputManager.SetPlayer(this);
-                Debug.Log($"[PlayerMovement] InputManager set - player reference: {InputManager.inputManager != null}");
 
                 // Enable camera cho owner - ĐẢM BẢO camera được enable
                 // Dựa trên cấu trúc: playerCam/CameraPivot/CameraContainer/Main Camera
@@ -586,7 +591,6 @@ namespace cowsins
                             cam.tag = "MainCamera";
                         }
 
-                        Debug.Log($"[PlayerMovement] Owner Camera found: {cam.gameObject.name}, path: {GetGameObjectPath(cam.gameObject)}, enabled: {cam.enabled}, cullingMask: {cam.cullingMask}, depth: {cam.depth}, activeInHierarchy: {cam.gameObject.activeInHierarchy}");
                     }
                     else
                     {
@@ -600,7 +604,6 @@ namespace cowsins
             }
             else
             {
-                Debug.Log($"[PlayerMovement] Setting up Remote player (not owner) - Disabling camera rendering");
 
                 // Disable camera rendering cho remote players (không disable hoàn toàn)
                 // QUAN TRỌNG: Disable TẤT CẢ cameras (Main Camera và WeaponCamera) để tránh hiển thị kép khi zoom
@@ -613,7 +616,6 @@ namespace cowsins
                         // Disable rendering cho tất cả cameras (Main Camera, WeaponCamera, v.v.)
                         cam.cullingMask = 0; // Không render gì cả
                         cam.enabled = false; // Disable camera hoàn toàn để tránh hiển thị kép
-                        Debug.Log($"[PlayerMovement] Disabled camera: {cam.gameObject.name} for remote player");
                     }
 
                     // Đặc biệt tìm và disable WeaponCamera theo đường dẫn: Camera/CameraPivot/CameraContainer/Main Camera/WeaponCamera
@@ -634,7 +636,6 @@ namespace cowsins
                                     {
                                         weaponCam.enabled = false;
                                         weaponCam.cullingMask = 0;
-                                        Debug.Log($"[PlayerMovement] Disabled WeaponCamera for remote player");
                                     }
                                 }
                             }
@@ -646,33 +647,63 @@ namespace cowsins
 
         public override void OnNetworkDespawn()
         {
-            base.OnNetworkDespawn();
-
-            // Unsubscribe from network variable changes
-            if (!IsOwner)
-            {
-                networkDesiredX.OnValueChanged -= OnDesiredXChanged;
-            }
+            // QUAN TRỌNG: Unsubscribe từ tất cả network variables để tránh memory leak
+            // Unsubscribe cho cả Owner và Remote players để đảm bảo cleanup hoàn toàn
+            networkDesiredX.OnValueChanged -= OnDesiredXChanged;
+            networkXRotation.OnValueChanged -= OnXRotationChanged;
+            networkCameraTilt.OnValueChanged -= OnCameraTiltChanged;
 
             // Clear player reference khi despawn
             if (IsOwner && InputManager.inputManager != null)
             {
                 InputManager.inputManager.SetPlayer(null);
             }
+
+            base.OnNetworkDespawn();
         }
 
         /// <summary>
-        /// Callback khi networkDesiredX thay đổi - áp dụng Camera rotation cho remote players
-        /// Vì tất cả player visuals (súng, cánh tay) nằm trong Camera, nên cần sync Camera rotation
+        /// Callback khi networkDesiredX thay đổi - áp dụng Camera rotation (yaw) cho remote players
         /// </summary>
         private void OnDesiredXChanged(float previousValue, float newValue)
         {
             if (!IsOwner && playerCam != null)
             {
-                // Sync rotation của Camera (yaw only, giữ pitch và roll)
-                Vector3 currentEuler = playerCam.transform.localRotation.eulerAngles;
-                playerCam.transform.localRotation = Quaternion.Euler(currentEuler.x, newValue, currentEuler.z);
-                Debug.Log($"[PlayerMovement] Applied Camera rotation (yaw): {newValue}, full rotation: {playerCam.transform.localRotation.eulerAngles}");
+                ApplyRemoteCameraRotation();
+            }
+        }
+
+        /// <summary>
+        /// Callback khi networkXRotation thay đổi - áp dụng Camera rotation (pitch) cho remote players
+        /// </summary>
+        private void OnXRotationChanged(float previousValue, float newValue)
+        {
+            if (!IsOwner && playerCam != null)
+            {
+                ApplyRemoteCameraRotation();
+            }
+        }
+
+        /// <summary>
+        /// Callback khi networkCameraTilt thay đổi - áp dụng Camera rotation (roll) cho remote players
+        /// </summary>
+        private void OnCameraTiltChanged(float previousValue, float newValue)
+        {
+            if (!IsOwner && playerCam != null)
+            {
+                ApplyRemoteCameraRotation();
+            }
+        }
+
+        /// <summary>
+        /// Áp dụng rotation đầy đủ (x, y, z) cho remote players từ network variables
+        /// </summary>
+        private void ApplyRemoteCameraRotation()
+        {
+            if (!IsOwner && playerCam != null)
+            {
+                // Sync rotation của Camera theo mọi trục (pitch, yaw, roll)
+                playerCam.transform.localRotation = Quaternion.Euler(networkXRotation.Value, networkDesiredX.Value, networkCameraTilt.Value);
             }
         }
 
@@ -1129,13 +1160,21 @@ namespace cowsins
             orientation.transform.localRotation = Quaternion.Euler(0, desiredX, 0); // the orientation
 
             // Sync Camera rotation qua network cho remote players (chỉ Owner mới có thể write)
-            // Vì tất cả player visuals (súng, cánh tay) nằm trong Camera, nên cần sync Camera rotation
+            // Sync tất cả 3 trục: pitch (xRotation), yaw (desiredX), roll (cameraTilt)
             if (IsOwner)
             {
                 // Chỉ update nếu giá trị thay đổi đáng kể (tránh spam network)
                 if (Mathf.Abs(networkDesiredX.Value - desiredX) > 0.1f)
                 {
                     networkDesiredX.Value = desiredX;
+                }
+                if (Mathf.Abs(networkXRotation.Value - xRotation) > 0.1f)
+                {
+                    networkXRotation.Value = xRotation;
+                }
+                if (Mathf.Abs(networkCameraTilt.Value - cameraTilt) > 0.1f)
+                {
+                    networkCameraTilt.Value = cameraTilt;
                 }
             }
 
@@ -1173,6 +1212,24 @@ namespace cowsins
             //Perform the rotations on: 
             playerCam.transform.localRotation = Quaternion.Euler(xRotation, desiredX, cameraTilt); // the camera parent
 
+            // Sync Camera rotation qua network cho remote players (chỉ Owner mới có thể write)
+            // Sync tất cả 3 trục: pitch (xRotation), yaw (desiredX), roll (cameraTilt)
+            if (IsOwner)
+            {
+                // Chỉ update nếu giá trị thay đổi đáng kể (tránh spam network)
+                if (Mathf.Abs(networkDesiredX.Value - desiredX) > 0.1f)
+                {
+                    networkDesiredX.Value = desiredX;
+                }
+                if (Mathf.Abs(networkXRotation.Value - xRotation) > 0.1f)
+                {
+                    networkXRotation.Value = xRotation;
+                }
+                if (Mathf.Abs(networkCameraTilt.Value - cameraTilt) > 0.1f)
+                {
+                    networkCameraTilt.Value = cameraTilt;
+                }
+            }
         }
 
         /// <summary>
