@@ -180,19 +180,105 @@ namespace cowsins
             Debug.Log($"[WeaponController] OnNetworkSpawn - IsOwner: {IsOwner}, OwnerClientId: {OwnerClientId}, LocalClientId: {NetworkManager.Singleton.LocalClientId}");
 
             // Disable camera rendering cho remote players
-            // KHÔNG disable camera hoàn toàn vì có thể ảnh hưởng đến weapon rendering
-            if (!IsOwner && mainCamera != null)
+            // QUAN TRỌNG: Disable TẤT CẢ cameras để tránh hiển thị kép khi owner zoom
+            if (!IsOwner)
             {
-                // Chỉ disable camera rendering (culling mask) thay vì disable hoàn toàn
-                mainCamera.cullingMask = 0; // Không render gì cả
-                Debug.Log("[WeaponController] Remote player camera cullingMask set to 0");
+                if (mainCamera != null)
+                {
+                    // Disable camera hoàn toàn để tránh hiển thị kép
+                    mainCamera.cullingMask = 0; // Không render gì cả
+                    mainCamera.enabled = false; // Disable camera hoàn toàn
+                    Debug.Log("[WeaponController] Disabled mainCamera for remote player");
+                }
+
+                // Tìm và disable tất cả cameras khác (WeaponCamera, v.v.)
+                Camera[] allCameras = GetComponentsInChildren<Camera>(true);
+                foreach (Camera cam in allCameras)
+                {
+                    if (cam != mainCamera)
+                    {
+                        cam.cullingMask = 0;
+                        cam.enabled = false;
+                        Debug.Log($"[WeaponController] Disabled camera: {cam.gameObject.name} for remote player");
+                    }
+                }
             }
             else if (IsOwner && mainCamera != null)
             {
                 // Đảm bảo camera của owner hoạt động bình thường
                 mainCamera.enabled = true;
-                mainCamera.cullingMask = -1; // Render tất cả
+
+                // Main Camera render tất cả TRỪ layer "Weapons" (cánh tay, vũ khí)
+                // Vì cánh tay và vũ khí nằm trong WeaponCamera hierarchy và sẽ được WeaponCamera render
+                int weaponsLayer = LayerMask.NameToLayer("Weapons");
+                if (weaponsLayer != -1)
+                {
+                    // Main Camera không render layer Weapons để tránh duplicate
+                    mainCamera.cullingMask = ~(1 << weaponsLayer);
+                    Debug.Log($"[WeaponController] Main Camera configured: excluding Weapons layer ({weaponsLayer}) to avoid duplicate rendering");
+                }
+                else
+                {
+                    // Nếu không có layer Weapons, render tất cả (giữ nguyên behavior cũ)
+                    mainCamera.cullingMask = -1;
+                    Debug.LogWarning("[WeaponController] Weapons layer not found. Main Camera will render all layers (may cause duplicate visuals).");
+                }
+
                 Debug.Log($"[WeaponController] Owner camera enabled: {mainCamera.enabled}, cullingMask: {mainCamera.cullingMask}, depth: {mainCamera.depth}");
+
+                // Cấu hình WeaponCamera để CHỈ render cánh tay, vũ khí và effects (KHÔNG render scene)
+                // Tìm WeaponCamera trong Main Camera
+                Transform weaponCameraTransform = mainCamera.transform.Find("WeaponCamera");
+                if (weaponCameraTransform != null)
+                {
+                    Camera weaponCam = weaponCameraTransform.GetComponent<Camera>();
+                    if (weaponCam != null)
+                    {
+                        // WeaponCamera CHỈ render layer "Weapons" (cánh tay, vũ khí) và layer "Effects" (bullet impacts)
+                        // KHÔNG render scene để tránh duplicate
+                        // Reuse weaponsLayer variable already declared above
+                        int effectsLayer = LayerMask.NameToLayer("Effects");
+
+                        int cullingMask = 0;
+                        if (weaponsLayer != -1)
+                        {
+                            cullingMask |= (1 << weaponsLayer);
+                        }
+                        if (effectsLayer != -1)
+                        {
+                            cullingMask |= (1 << effectsLayer);
+                        }
+
+                        if (cullingMask != 0)
+                        {
+                            weaponCam.cullingMask = cullingMask;
+                            Debug.Log($"[WeaponController] WeaponCamera configured: only rendering Weapons layer ({weaponsLayer}) and Effects layer ({effectsLayer})");
+                        }
+                        else
+                        {
+                            // Nếu không tìm thấy layer, chỉ render Weapons layer (nếu có)
+                            if (weaponsLayer != -1)
+                            {
+                                weaponCam.cullingMask = (1 << weaponsLayer);
+                            }
+                            else
+                            {
+                                // Fallback: disable WeaponCamera nếu không tìm thấy layer nào
+                                weaponCam.enabled = false;
+                                Debug.LogWarning("[WeaponController] Could not find Weapons or Effects layer. WeaponCamera disabled to avoid duplicate scene rendering.");
+                                return;
+                            }
+                        }
+
+                        // Đảm bảo WeaponCamera có depth cao hơn Main Camera để render trên cùng
+                        if (weaponCam.depth <= mainCamera.depth)
+                        {
+                            weaponCam.depth = mainCamera.depth + 1;
+                        }
+                        weaponCam.enabled = true;
+                        Debug.Log($"[WeaponController] Configured WeaponCamera: cullingMask={weaponCam.cullingMask}, depth={weaponCam.depth}, enabled={weaponCam.enabled}");
+                    }
+                }
             }
             else if (IsOwner && mainCamera == null)
             {
@@ -209,13 +295,63 @@ namespace cowsins
 
         private void Update()
         {
-            if (!IsOwner) return;
+            if (!IsOwner)
+            {
+                // Đảm bảo camera của remote player luôn bị disable (kể cả khi owner zoom)
+                EnsureRemoteCamerasDisabled();
+                return;
+            }
 
             HandleUI();
             HandleAimingMotion();
             ManageWeaponMethodsInputs();
             HandleRecoil();
             HandleHeatRatio();
+        }
+
+        /// <summary>
+        /// Đảm bảo tất cả cameras của remote player luôn bị disable
+        /// Bao gồm Main Camera và WeaponCamera
+        /// </summary>
+        private void EnsureRemoteCamerasDisabled()
+        {
+            // Disable mainCamera
+            if (mainCamera != null)
+            {
+                if (mainCamera.enabled)
+                {
+                    mainCamera.enabled = false;
+                    mainCamera.cullingMask = 0;
+                }
+            }
+
+            // Tìm và disable tất cả cameras trong toàn bộ player object (bao gồm WeaponCamera)
+            // Sử dụng GetComponentsInChildren với includeInactive = true để tìm cả cameras bị inactive
+            Camera[] allCameras = GetComponentsInChildren<Camera>(true);
+            foreach (Camera cam in allCameras)
+            {
+                // Disable tất cả cameras (Main Camera, WeaponCamera, v.v.)
+                if (cam != null && cam.enabled)
+                {
+                    cam.enabled = false;
+                    cam.cullingMask = 0;
+                }
+            }
+
+            // Đặc biệt tìm WeaponCamera theo tên để đảm bảo disable
+            if (mainCamera != null)
+            {
+                Transform weaponCameraTransform = mainCamera.transform.Find("WeaponCamera");
+                if (weaponCameraTransform != null)
+                {
+                    Camera weaponCam = weaponCameraTransform.GetComponent<Camera>();
+                    if (weaponCam != null && weaponCam.enabled)
+                    {
+                        weaponCam.enabled = false;
+                        weaponCam.cullingMask = 0;
+                    }
+                }
+            }
         }
 
         private float aimingSpeed;

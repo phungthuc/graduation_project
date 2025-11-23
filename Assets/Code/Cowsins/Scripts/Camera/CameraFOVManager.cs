@@ -1,4 +1,5 @@
 using UnityEngine;
+using Unity.Netcode;
 
 namespace cowsins
 {
@@ -10,18 +11,32 @@ namespace cowsins
         private Camera cam;
         private PlayerMovement movement;
         private WeaponController weapon;
+        private NetworkBehaviour networkBehaviour;
 
         private void Start()
         {
             cam = GetComponent<Camera>();
             movement = player.GetComponent<PlayerMovement>();
             weapon = player.GetComponent<WeaponController>();
+            networkBehaviour = player.GetComponent<NetworkBehaviour>();
 
             baseFOV = movement.normalFOV; // Initialize baseFOV once in Start
         }
 
         private void Update()
         {
+            // Chỉ xử lý FOV cho owner, và đảm bảo camera của remote player luôn disabled
+            if (networkBehaviour != null && !networkBehaviour.IsOwner)
+            {
+                // Đảm bảo camera của remote player luôn bị disable
+                if (cam != null && cam.enabled)
+                {
+                    cam.enabled = false;
+                    cam.cullingMask = 0;
+                }
+                return;
+            }
+
             if (weapon.isAiming && weapon.weapon != null)
                 return; // Not applicable if aiming
 

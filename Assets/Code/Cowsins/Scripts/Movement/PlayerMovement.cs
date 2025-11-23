@@ -603,56 +603,42 @@ namespace cowsins
                 Debug.Log($"[PlayerMovement] Setting up Remote player (not owner) - Disabling camera rendering");
 
                 // Disable camera rendering cho remote players (không disable hoàn toàn)
+                // QUAN TRỌNG: Disable TẤT CẢ cameras (Main Camera và WeaponCamera) để tránh hiển thị kép khi zoom
                 if (playerCam != null)
                 {
-                    // Tìm camera component theo cấu trúc: playerCam/CameraPivot/CameraContainer/Main Camera
-                    Camera cam = playerCam.GetComponent<Camera>();
-
-                    if (cam == null)
+                    // Tìm tất cả cameras trong playerCam và disable rendering
+                    Camera[] allCameras = playerCam.GetComponentsInChildren<Camera>(true);
+                    foreach (Camera cam in allCameras)
                     {
-                        // Tìm theo đường dẫn: CameraPivot/CameraContainer/Main Camera
-                        Transform cameraPivot = playerCam.Find("CameraPivot");
-                        if (cameraPivot != null)
+                        // Disable rendering cho tất cả cameras (Main Camera, WeaponCamera, v.v.)
+                        cam.cullingMask = 0; // Không render gì cả
+                        cam.enabled = false; // Disable camera hoàn toàn để tránh hiển thị kép
+                        Debug.Log($"[PlayerMovement] Disabled camera: {cam.gameObject.name} for remote player");
+                    }
+
+                    // Đặc biệt tìm và disable WeaponCamera theo đường dẫn: Camera/CameraPivot/CameraContainer/Main Camera/WeaponCamera
+                    Transform cameraPivot = playerCam.Find("CameraPivot");
+                    if (cameraPivot != null)
+                    {
+                        Transform cameraContainer = cameraPivot.Find("CameraContainer");
+                        if (cameraContainer != null)
                         {
-                            Transform cameraContainer = cameraPivot.Find("CameraContainer");
-                            if (cameraContainer != null)
+                            Transform mainCameraTransform = cameraContainer.Find("Main Camera");
+                            if (mainCameraTransform != null)
                             {
-                                Transform mainCameraTransform = cameraContainer.Find("Main Camera");
-                                if (mainCameraTransform != null)
+                                Transform weaponCameraTransform = mainCameraTransform.Find("WeaponCamera");
+                                if (weaponCameraTransform != null)
                                 {
-                                    cam = mainCameraTransform.GetComponent<Camera>();
+                                    Camera weaponCam = weaponCameraTransform.GetComponent<Camera>();
+                                    if (weaponCam != null)
+                                    {
+                                        weaponCam.enabled = false;
+                                        weaponCam.cullingMask = 0;
+                                        Debug.Log($"[PlayerMovement] Disabled WeaponCamera for remote player");
+                                    }
                                 }
                             }
                         }
-                    }
-
-                    if (cam == null)
-                    {
-                        // Tìm tất cả cameras và chọn "Main Camera"
-                        Camera[] allCameras = playerCam.GetComponentsInChildren<Camera>(true);
-                        foreach (Camera c in allCameras)
-                        {
-                            if (c.gameObject.name == "Main Camera")
-                            {
-                                cam = c;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (cam == null)
-                    {
-                        cam = playerCam.GetComponentInChildren<Camera>(true);
-                    }
-
-                    if (cam == null && weaponController != null)
-                    {
-                        cam = weaponController.mainCamera;
-                    }
-
-                    if (cam != null)
-                    {
-                        cam.cullingMask = 0; // Không render gì cả, nhưng vẫn giữ camera enabled
                     }
                 }
             }
@@ -732,12 +718,62 @@ namespace cowsins
 
         private void Update()
         {
-            if (!IsOwner) return;
+            if (!IsOwner)
+            {
+                // Đảm bảo tất cả cameras của remote player luôn bị disable (kể cả khi owner zoom)
+                EnsureRemoteCamerasDisabled();
+                return;
+            }
+
             CheckGroundedWithRaycast();
 
             if (canWallBounce) CheckOppositeWall();
 
             if (InputManager.jumping && wallOpposite && canWallBounce && PlayerStats.Controllable && CheckHeight()) WallBounce();
+        }
+
+        /// <summary>
+        /// Đảm bảo tất cả cameras của remote player luôn bị disable
+        /// Bao gồm Main Camera và WeaponCamera
+        /// </summary>
+        private void EnsureRemoteCamerasDisabled()
+        {
+            if (playerCam == null) return;
+
+            // Tìm và disable tất cả cameras trong playerCam
+            Camera[] allCameras = playerCam.GetComponentsInChildren<Camera>(true);
+            foreach (Camera cam in allCameras)
+            {
+                if (cam != null && cam.enabled)
+                {
+                    cam.enabled = false;
+                    cam.cullingMask = 0;
+                }
+            }
+
+            // Đặc biệt tìm và disable WeaponCamera theo đường dẫn
+            Transform cameraPivot = playerCam.Find("CameraPivot");
+            if (cameraPivot != null)
+            {
+                Transform cameraContainer = cameraPivot.Find("CameraContainer");
+                if (cameraContainer != null)
+                {
+                    Transform mainCameraTransform = cameraContainer.Find("Main Camera");
+                    if (mainCameraTransform != null)
+                    {
+                        Transform weaponCameraTransform = mainCameraTransform.Find("WeaponCamera");
+                        if (weaponCameraTransform != null)
+                        {
+                            Camera weaponCam = weaponCameraTransform.GetComponent<Camera>();
+                            if (weaponCam != null && weaponCam.enabled)
+                            {
+                                weaponCam.enabled = false;
+                                weaponCam.cullingMask = 0;
+                            }
+                        }
+                    }
+                }
+            }
         }
         public void HandleVelocities()
         {

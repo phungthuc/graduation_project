@@ -32,7 +32,11 @@ namespace cowsins
 
         private void Update()
         {
-            if (!IsOwner) return;
+            if (!IsOwner)
+            {
+                // Đảm bảo camera effects không chạy cho remote players
+                return;
+            }
             if (!PlayerStats.Controllable) return;
 
             UpdateTilt();
