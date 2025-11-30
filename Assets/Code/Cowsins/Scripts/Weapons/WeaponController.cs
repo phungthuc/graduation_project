@@ -61,6 +61,7 @@ namespace cowsins
 
         private bool reloading;
         public bool Reloading { get { return reloading; } set { reloading = value; } }
+        private bool reloadSoundPlayed = false; // Flag để tránh duplicate reload sound
 
         [Tooltip("If true you won´t have to press the reload button when you run out of bullets")] public bool autoReload;
 
@@ -131,6 +132,21 @@ namespace cowsins
             private set { if (IsServer) networkCurrentWeapon.Value = value; }
         }
 
+        // Network Variables để đồng bộ ammo của weapon hiện tại
+        private NetworkVariable<int> networkBulletsLeftInMagazine = new NetworkVariable<int>(
+            0,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server
+        );
+
+        private NetworkVariable<int> networkTotalBullets = new NetworkVariable<int>(
+            0,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server
+        );
+
+        private bool _isSubscribedToAmmo = false;
+
         private AudioClips audioSFX;
 
         public WeaponIdentification id;
@@ -178,6 +194,15 @@ namespace cowsins
 
             // Debug log để kiểm tra
             Debug.Log($"[WeaponController] OnNetworkSpawn - IsOwner: {IsOwner}, OwnerClientId: {OwnerClientId}, LocalClientId: {NetworkManager.Singleton.LocalClientId}");
+
+            // Subscribe to ammo changes để update UI
+            if (!_isSubscribedToAmmo)
+            {
+                networkBulletsLeftInMagazine.OnValueChanged += OnBulletsLeftInMagazineChanged;
+                networkTotalBullets.OnValueChanged += OnTotalBulletsChanged;
+                networkCurrentWeapon.OnValueChanged += OnCurrentWeaponChanged;
+                _isSubscribedToAmmo = true;
+            }
 
             // Disable camera rendering cho remote players
             // QUAN TRỌNG: Disable TẤT CẢ cameras để tránh hiển thị kép khi owner zoom
@@ -284,6 +309,75 @@ namespace cowsins
             {
                 Debug.LogError("[WeaponController] Owner player but mainCamera is null!");
             }
+        }
+
+        public override void OnNetworkDespawn()
+        {
+            base.OnNetworkDespawn();
+
+            // Unsubscribe from ammo changes
+            if (_isSubscribedToAmmo)
+            {
+                networkBulletsLeftInMagazine.OnValueChanged -= OnBulletsLeftInMagazineChanged;
+                networkTotalBullets.OnValueChanged -= OnTotalBulletsChanged;
+                networkCurrentWeapon.OnValueChanged -= OnCurrentWeaponChanged;
+                _isSubscribedToAmmo = false;
+            }
+        }
+
+        // Callbacks khi ammo thay đổi trên network
+        private void OnBulletsLeftInMagazineChanged(int previousValue, int newValue)
+        {
+            // Update local ammo từ network
+            if (id != null)
+            {
+                id.bulletsLeftInMagazine = newValue;
+            }
+
+            // Update UI nếu là owner
+            if (IsOwner)
+            {
+                HandleUI();
+            }
+        }
+
+        private void OnTotalBulletsChanged(int previousValue, int newValue)
+        {
+            // Update local ammo từ network
+            if (id != null)
+            {
+                id.totalBullets = newValue;
+            }
+
+            // Update UI nếu là owner
+            if (IsOwner)
+            {
+                HandleUI();
+            }
+        }
+
+        // Callback khi current weapon thay đổi
+        private void OnCurrentWeaponChanged(int previousValue, int newValue)
+        {
+            // Khi weapon thay đổi, update ammo từ network variable
+            if (inventory != null && newValue >= 0 && newValue < inventory.Length && inventory[newValue] != null)
+            {
+                id = inventory[newValue];
+                if (id != null)
+                {
+                    id.bulletsLeftInMagazine = networkBulletsLeftInMagazine.Value;
+                    id.totalBullets = networkTotalBullets.Value;
+                }
+            }
+        }
+
+        // Method để sync ammo lên network (chỉ server mới gọi)
+        private void SyncAmmoToNetwork()
+        {
+            if (!IsServer || id == null) return;
+
+            networkBulletsLeftInMagazine.Value = id.bulletsLeftInMagazine;
+            networkTotalBullets.Value = id.totalBullets;
         }
 
         private void Start()
@@ -943,20 +1037,70 @@ namespace cowsins
         public void StartReload()
         {
             if (!IsOwner) return;
+            // Tránh gọi reload nhiều lần
+            if (reloading) return;
             StartReloadServerRpc();
         }
 
         [ServerRpc]
         private void StartReloadServerRpc()
         {
+            // Tránh gọi reload nhiều lần trên server
+            if (reloading) return;
+
+            // Set reloading flag ngay lập tức để tránh duplicate calls
+            reloading = true;
+            reloadSoundPlayed = false; // Reset flag cho lần reload mới
+
+            // Start reload coroutine trên server
             StartCoroutine(reload());
-            StartReloadClientRpc();
+
+            // Gửi reload effects đến owner (chỉ gửi đến owner, không gửi đến Server)
+            // Sử dụng ClientRpc với TargetClientIds để chỉ gửi đến owner
+            bool isEmptyMag = id != null && id.bulletsLeftInMagazine == 0;
+            ulong ownerClientId = OwnerClientId;
+            StartReloadClientRpc(isEmptyMag, new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new ulong[] { ownerClientId }
+                }
+            });
         }
 
         [ClientRpc]
-        private void StartReloadClientRpc()
+        private void StartReloadClientRpc(bool isEmptyMag, ClientRpcParams rpcParams = default)
         {
-            // Additional client-side reload effects if needed
+            // Chỉ owner mới nhận được RPC này (đã filter ở ServerRpc)
+            // Set reloading flag trên Client để tránh gọi reload nhiều lần
+            reloading = true;
+            reloadSoundPlayed = false; // Reset flag trước khi play để đảm bảo mỗi lần reload đều play sound
+
+            if (weapon != null && inventory != null && currentWeapon >= 0 && currentWeapon < inventory.Length && inventory[currentWeapon] != null)
+            {
+                // Play reload sound (chỉ play một lần cho mỗi lần reload)
+                AudioClip reloadSound = isEmptyMag ? weapon.audioSFX.emptyMagReload : weapon.audioSFX.reload;
+                if (reloadSound != null)
+                {
+                    SoundManager.Instance.PlaySound(reloadSound, .1f, 0, true, 0);
+                    reloadSoundPlayed = true; // Đánh dấu đã play sound
+                }
+
+                // Play reload animation
+                Animator weaponAnimator = inventory[currentWeapon].GetComponentInChildren<Animator>();
+                if (weaponAnimator != null)
+                {
+                    CowsinsUtilities.PlayAnim("reloading", weaponAnimator);
+                }
+            }
+        }
+
+        [ClientRpc]
+        private void FinishReloadClientRpc(ClientRpcParams rpcParams = default)
+        {
+            // Reset reloading flag trên Client khi reload hoàn thành
+            reloading = false;
+            reloadSoundPlayed = false;
         }
 
         /// <summary>
@@ -964,14 +1108,11 @@ namespace cowsins
         /// </summary>
         private IEnumerator DefaultReload()
         {
-
-            // Play reload sound
-            SoundManager.Instance.PlaySound(id.bulletsLeftInMagazine == 0 ? weapon.audioSFX.emptyMagReload : weapon.audioSFX.reload, .1f, 0, true, 0);
-            reloading = true;
+            // reloading flag đã được set trong StartReloadServerRpc() trước khi coroutine này chạy
             yield return new WaitForSeconds(.001f);
 
-            // Play animation
-            CowsinsUtilities.PlayAnim("reloading", inventory[currentWeapon].GetComponentInChildren<Animator>());
+            // Sound và animation đã được play qua ClientRpc, không cần play lại trên Server
+            // Chỉ cần set reloading state
 
             // Wait reloadTime seconds, assigned in the weapon scriptable object.
             yield return new WaitForSeconds(reloadTime);
@@ -986,6 +1127,17 @@ namespace cowsins
             events.OnReload.Invoke();
 
             reloading = false;
+            reloadSoundPlayed = false; // Reset flag khi reload hoàn thành
+
+            // Gửi ClientRpc để reset reloading flag trên Client
+            ulong ownerClientId = OwnerClientId;
+            FinishReloadClientRpc(new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new ulong[] { ownerClientId }
+                }
+            });
 
             // Set the proper amount of bullets, depending on magazine type.
             if (!weapon.limitedMagazines) id.bulletsLeftInMagazine = id.magazineSize;
@@ -1019,6 +1171,9 @@ namespace cowsins
                     }
                 }
             }
+
+            // Sync ammo lên network sau khi reload
+            SyncAmmoToNetwork();
         }
 
         private IEnumerator OverheatReload()
@@ -1038,19 +1193,34 @@ namespace cowsins
             events.OnFinishReload.Invoke();
 
             reloading = false;
+            reloadSoundPlayed = false; // Reset flag khi reload hoàn thành
+
+            // Gửi ClientRpc để reset reloading flag trên Client
+            ulong ownerClientId = OwnerClientId;
+            FinishReloadClientRpc(new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new ulong[] { ownerClientId }
+                }
+            });
+
             canShoot = true;
         }
 
         // On shooting regular reloading weapons, reduce the bullets in the magazine
         private void ReduceDefaultAmmo()
         {
-            if (!weapon.infiniteBullets)
+            if (!weapon.infiniteBullets && id != null)
             {
                 id.bulletsLeftInMagazine -= weapon.ammoCostPerFire;
                 if (id.bulletsLeftInMagazine < 0)
                 {
                     id.bulletsLeftInMagazine = 0;
                 }
+
+                // Sync ammo lên network
+                SyncAmmoToNetwork();
             }
         }
 
@@ -1122,6 +1292,9 @@ namespace cowsins
             }
 
             firePoint = inventory[currentWeapon].FirePoint;
+
+            // Sync ammo lên network khi equip weapon
+            SyncAmmoToNetwork();
 
             // UI & OTHERS
             if (weapon.infiniteBullets || weapon.reloadStyle == ReloadingStyle.Overheat)
@@ -1296,6 +1469,20 @@ namespace cowsins
             {
                 UIEvents.disableWeaponUI?.Invoke();
                 return;
+            }
+
+            // Đảm bảo ammo được sync từ network nếu có
+            if (id != null)
+            {
+                // Nếu ammo local khác với network, update từ network (cho client)
+                if (!IsServer && networkBulletsLeftInMagazine.Value != id.bulletsLeftInMagazine)
+                {
+                    id.bulletsLeftInMagazine = networkBulletsLeftInMagazine.Value;
+                }
+                if (!IsServer && networkTotalBullets.Value != id.totalBullets)
+                {
+                    id.totalBullets = networkTotalBullets.Value;
+                }
             }
 
             UIEvents.enableWeaponDisplay?.Invoke();
@@ -1481,6 +1668,13 @@ namespace cowsins
             (newWeapon.limitedMagazines
                 ? newWeapon.magazineSize * newWeapon.totalMagazines
                 : newWeapon.magazineSize);
+
+            // Sync ammo lên network nếu đây là weapon hiện tại
+            if (inventoryIndex == currentWeapon && IsServer)
+            {
+                id = inventory[inventoryIndex];
+                SyncAmmoToNetwork();
+            }
 
             //UI
             slots[inventoryIndex].weapon = newWeapon;

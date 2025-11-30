@@ -1,33 +1,34 @@
-/// <summary>
-/// This script belongs to cowsins as a part of the cowsins FPS Engine. All rights reserved. 
-/// </summary>
 using UnityEngine;
 using Unity.Netcode;
 
-namespace cowsins
+namespace TheTunnel.UI
 {
-    public class LookAt : MonoBehaviour
+    /// <summary>
+    /// Script để quay health bar về phía local player camera trong multiplayer
+    /// Mỗi client sẽ thấy health bar quay về camera của chính họ
+    /// </summary>
+    public class HealthBarBillboard : MonoBehaviour
     {
-        private Transform Player;
         private Camera localPlayerCamera;
         private Transform cameraTransform;
 
         private void Start()
         {
             FindLocalPlayerCamera();
-            // Fallback: Tìm player transform nếu không tìm thấy camera
-            if (Player == null)
-            {
-                Player = GameObject.FindGameObjectWithTag("Player")?.transform;
-            }
         }
 
         private void Update()
         {
-            // Ưu tiên sử dụng camera của local player
-            if (cameraTransform != null && localPlayerCamera != null)
+            // Tìm lại camera nếu chưa có hoặc camera bị destroy
+            if (cameraTransform == null || localPlayerCamera == null)
             {
-                // Quay về camera, nhưng chỉ quay theo trục Y (horizontal)
+                FindLocalPlayerCamera();
+            }
+
+            // Quay health bar về phía camera
+            if (cameraTransform != null)
+            {
+                // Sử dụng LookAt để quay về camera, nhưng chỉ quay theo trục Y (horizontal)
                 Vector3 direction = cameraTransform.position - transform.position;
                 direction.y = 0; // Chỉ quay theo trục Y (horizontal)
                 
@@ -36,21 +37,12 @@ namespace cowsins
                     transform.rotation = Quaternion.LookRotation(-direction);
                 }
             }
-            else if (Player != null)
-            {
-                // Fallback: Quay về player position (giữ nguyên logic cũ)
-                transform.LookAt(new Vector3(Player.position.x, transform.position.y, Player.position.z));
-            }
-            else
-            {
-                // Tìm lại camera nếu chưa có
-                FindLocalPlayerCamera();
-            }
         }
 
         private void FindLocalPlayerCamera()
         {
             // Tìm local player (player của client hiện tại)
+            // Trong multiplayer, mỗi client có một player object riêng
             GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
             
             foreach (GameObject player in players)
@@ -74,7 +66,6 @@ namespace cowsins
                                 if (localPlayerCamera != null)
                                 {
                                     cameraTransform = mainCameraTransform;
-                                    Player = player.transform; // Set player transform làm fallback
                                     return;
                                 }
                             }
@@ -89,7 +80,6 @@ namespace cowsins
                         {
                             localPlayerCamera = cam;
                             cameraTransform = cam.transform;
-                            Player = player.transform; // Set player transform làm fallback
                             return;
                         }
                     }
@@ -105,3 +95,4 @@ namespace cowsins
         }
     }
 }
+
