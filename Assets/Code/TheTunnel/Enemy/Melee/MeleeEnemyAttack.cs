@@ -5,6 +5,7 @@ using TheTunnel.Core;
 using TheTunnel.Manager;
 using TheTunnel.Target;
 using TheTunnel.Weapon;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace TheTunnel.Enemy
@@ -51,14 +52,37 @@ namespace TheTunnel.Enemy
             punchWeapon.gameObject.SetActive(enableAttack);
         }
 
+        private EnemyBase enemyBase;
+
+        private void Awake()
+        {
+            enemyBase = GetComponent<EnemyBase>();
+        }
+
         public override void Attack()
         {
+            if (enemyBase == null || !enemyBase.IsServer) return; // Chỉ server thực hiện attack logic
+
+            // Play sound và animation trên tất cả clients
+            PlayAttackEffects();
+        }
+
+        private void PlayAttackEffects()
+        {
+            // Play sound và animation trên tất cả clients
             GameSoundManager.Instance.PlaySound(swingSound, 0, true, 1f, transform.position);
-            _enemyStateManager.animator.SetTrigger(AttackTriggerParam);
+
+            // Sử dụng SetAnimatorTrigger để sync animation qua network
+            if (_enemyStateManager != null)
+            {
+                _enemyStateManager.SetAnimatorTrigger(AttackTriggerParam);
+            }
         }
 
         private void OnHit(GameObject hitGo)
         {
+            if (enemyBase == null || !enemyBase.IsServer) return; // Chỉ server xử lý damage
+
             ApplyDamageToGameObject(hitGo);
         }
 
@@ -72,7 +96,17 @@ namespace TheTunnel.Enemy
         {
             if (hitGo.CompareTag(GameConstant.PLAYER_TAG))
             {
-                _playerStat.Damage(damage, false);
+                // Tìm NetworkObject của player để gửi damage
+                NetworkObject playerNetworkObject = hitGo.GetComponent<NetworkObject>();
+                if (playerNetworkObject != null)
+                {
+                    // Gửi damage qua RPC đến player
+                    PlayerStats playerStats = hitGo.GetComponent<PlayerStats>();
+                    if (playerStats != null)
+                    {
+                        playerStats.Damage(damage, false);
+                    }
+                }
             }
 
             if (hitGo.CompareTag(GameConstant.CASTLE_TAG))

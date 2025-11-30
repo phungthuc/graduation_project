@@ -1,4 +1,5 @@
 using TheTunnel.Core;
+using TheTunnel.Manager;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -12,6 +13,8 @@ namespace TheTunnel.Player
         [SerializeField] private Transform[] spawnPoints;
 
         private bool playersSpawned = false;
+
+        private GameManager gameManager;
 
         public override void OnNetworkSpawn()
         {
@@ -29,6 +32,11 @@ namespace TheTunnel.Player
         private void OnSceneEvent(SceneEvent sceneEvent)
         {
             if (!IsServer) return;
+
+            if (gameManager == null)
+            {
+                gameManager = FindFirstObjectByType<GameManager>();
+            }
 
             // Đảm bảo ta xử lý cho scene Play
             if (sceneEvent.SceneEventType == SceneEventType.LoadComplete &&
@@ -69,6 +77,11 @@ namespace TheTunnel.Player
                 playerInstance.SpawnAsPlayerObject(clientId);
 
                 i++;
+            }
+
+            if (gameManager != null)
+            {
+                gameManager.StartCountDown();
             }
         }
     }

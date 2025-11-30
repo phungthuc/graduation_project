@@ -48,6 +48,11 @@ namespace TheTunnel.Enemy
             {
                 return;
             }
+            // Chỉ server mới spawn enemies
+            if (!Unity.Netcode.NetworkManager.Singleton.IsServer)
+            {
+                return;
+            }
             _timeCounter += Time.deltaTime;
             if (_timeCounter > _timeNextWave)
             {
@@ -62,6 +67,13 @@ namespace TheTunnel.Enemy
 
         public void LoadWaveData(List<WaveData> waveDataList)
         {
+            // Chỉ server mới load và spawn waves
+            if (!Unity.Netcode.NetworkManager.Singleton.IsServer)
+            {
+                return;
+            }
+
+            Debug.Log("LoadWaveData: " + waveDataList.Count);
             _waveDataList = waveDataList;
             _currentWaveIndex = 0;
             _timeCounter = 0;

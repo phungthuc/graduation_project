@@ -9,7 +9,7 @@ namespace TheTunnel.CharacterControl
         public void Enter(CharacterStateManager characterStateManager)
         {
             EnemyStateManager enemyStateManager = (EnemyStateManager)characterStateManager;
-            enemyStateManager.animator.SetBool(IsRunning, false);
+            enemyStateManager.SetAnimatorBool(IsRunning, false);
         }
 
         public void Exit(CharacterStateManager characterStateManager)

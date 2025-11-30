@@ -3,6 +3,7 @@ using cowsins;
 using TheTunnel.Enemy;
 using TheTunnel.Manager;
 using TheTunnel.Projectile;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -35,8 +36,17 @@ namespace TheTunnel.Enemy
             fireCooldown = 0f;
         }
 
+        private EnemyBase enemyBase;
+
+        private void Awake()
+        {
+            enemyBase = GetComponent<EnemyBase>();
+        }
+
         public override void Attack()
         {
+            if (enemyBase == null || !enemyBase.IsServer) return; // Chỉ server thực hiện attack logic
+
             if (targetTransform == null)
             {
                 return;
@@ -48,14 +58,48 @@ namespace TheTunnel.Enemy
             if (fireCooldown <= 0)
             {
                 fireCooldown = fireRate;
-                Instantiate(muzzleFlash, firePoint.position, _targetRotation);
-                GameSoundManager.Instance.PlaySound(fireSound, 2, true, 0, transform.position);
-                TankProjectile proj = Instantiate(projectilePrefab, firePoint.position, Quaternion.identity).gameObject.GetComponent<TankProjectile>();
-                proj.dir = _targetDirection;
+                FireProjectile();
+            }
+        }
+
+        private void FireProjectile()
+        {
+            // Server spawn projectile
+            SpawnProjectile(firePoint.position, _targetDirection, _targetRotation);
+        }
+
+        private void SpawnProjectile(Vector3 position, Vector3 direction, Quaternion rotation)
+        {
+            // Spawn projectile như NetworkObject (nếu projectile có NetworkObject)
+            GameObject projObj = Instantiate(projectilePrefab, position, rotation);
+            TankProjectile proj = projObj.GetComponent<TankProjectile>();
+            
+            if (proj != null)
+            {
+                proj.dir = direction;
                 proj.damage = damage;
                 proj.speed = projectileSpeed;
-                Destroy(proj.gameObject, projectileDuration);
             }
+
+            // Spawn projectile trên network nếu có NetworkObject
+            NetworkObject projNetworkObject = projObj.GetComponent<NetworkObject>();
+            if (projNetworkObject != null)
+            {
+                projNetworkObject.Spawn();
+            }
+
+            // Play effects trên tất cả clients
+            PlayFireEffects(position, rotation);
+
+            // Destroy sau duration (chỉ trên server)
+            Destroy(projObj, projectileDuration);
+        }
+
+        private void PlayFireEffects(Vector3 position, Quaternion rotation)
+        {
+            // Play sound và muzzle flash trên tất cả clients
+            Instantiate(muzzleFlash, position, rotation);
+            GameSoundManager.Instance.PlaySound(fireSound, 2, true, 0, position);
         }
     }
 }

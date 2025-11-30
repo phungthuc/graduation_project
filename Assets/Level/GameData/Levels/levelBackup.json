@@ -5,6 +5,28 @@
       {
         "enemyData": [
           {
+            "enemyId": "melee",
+            "amount": 2
+          },
+          {
+            "enemyId": "sword",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 5
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "longRange",
+            "amount": 2
+          }
+        ],
+        "timeNextWave": 7
+      },
+      {
+        "enemyData": [
+          {
             "enemyId": "boss_golem",
             "amount": 1
           }

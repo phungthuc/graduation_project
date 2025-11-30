@@ -3,12 +3,13 @@ using System.Collections;
 using System.Collections.Generic;
 using TheTunnel.Manager;
 using TheTunnel.Target;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.AI;
 
 namespace TheTunnel.Enemy
 {
-    public class EnemyMovement : MonoBehaviour
+    public class EnemyMovement : NetworkBehaviour
     {
         [SerializeField]
         private AudioClip moveAudioClip;
@@ -17,7 +18,7 @@ namespace TheTunnel.Enemy
         private bool isHasGapTimeBetweenSteps = true;
 
         public float speed = 1f;
-        public bool isMoving = true;
+        public NetworkVariable<bool> isMoving = new NetworkVariable<bool>(true);
         public float scanDistance;
         public LayerMask scanLayer;
 
@@ -29,13 +30,24 @@ namespace TheTunnel.Enemy
 
         private void Start()
         {
-            _gapTimeBetweenSteps = isHasGapTimeBetweenSteps ? 1f - _agent.speed : moveAudioClip.length;
+            if (_agent != null)
+            {
+                _gapTimeBetweenSteps = isHasGapTimeBetweenSteps ? 1f - _agent.speed : moveAudioClip.length;
+            }
+        }
+
+        public override void OnNetworkSpawn()
+        {
+            base.OnNetworkSpawn();
         }
 
         private void OnEnable()
         {
             _agent = GetComponent<NavMeshAgent>();
-            _agent.speed = speed;
+            if (_agent != null)
+            {
+                _agent.speed = speed;
+            }
 
             GameObject target = GameObject.FindWithTag("Target");
             if (target != null)
@@ -55,7 +67,10 @@ namespace TheTunnel.Enemy
             if (Physics.Raycast(transform.position, direction, out RaycastHit hit, scanDistance, scanLayer))
             {
                 _targetTransform = hit.transform;
-                _agent.destination = hit.point;
+                if (_agent != null)
+                {
+                    _agent.destination = hit.point;
+                }
             }
         }
 
@@ -66,7 +81,9 @@ namespace TheTunnel.Enemy
 
         private void FixedUpdate()
         {
-            if (!isMoving || _targetTransform == null)
+            if (!IsServer) return; // Chỉ server điều khiển movement
+
+            if (!isMoving.Value || _targetTransform == null)
             {
                 return;
             }
@@ -76,9 +93,12 @@ namespace TheTunnel.Enemy
 
         private void FootSteps()
         {
-            if (moveAudioClip == null || !isMoving)
+            if (moveAudioClip == null || !isMoving.Value || _agent == null)
             {
-                _stepTimmer = 1f - _agent.speed;
+                if (_agent != null)
+                {
+                    _stepTimmer = 1f - _agent.speed;
+                }
                 return;
             }
 
@@ -92,16 +112,18 @@ namespace TheTunnel.Enemy
 
         public void SetMoving(bool value)
         {
+            if (!IsServer) return;
+
             if (_agent == null || !_agent.isOnNavMesh)
             {
                 return;
             }
 
-            if (isMoving == value)
+            if (isMoving.Value == value)
             {
                 return;
             }
-            isMoving = value;
+            isMoving.Value = value;
             _agent.isStopped = !value;
             if (!value)
             {

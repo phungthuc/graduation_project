@@ -763,6 +763,7 @@ GameObject:
   m_Component:
   - component: {fileID: 9185369908359637045}
   - component: {fileID: 532629810314248120}
+  - component: {fileID: 5112689171215959345}
   - component: {fileID: 193990823971214254}
   - component: {fileID: 5474638087941986471}
   - component: {fileID: 384037652505755052}
@@ -817,6 +818,31 @@ CapsuleCollider:
   m_Height: 7.67
   m_Direction: 2
   m_Center: {x: 0, y: 1.62, z: -0.36104512}
+--- !u!114 &5112689171215959345
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4138247280014359381}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  GlobalObjectIdHash: 2254156387
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
 --- !u!114 &193990823971214254
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -829,6 +855,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 378a4c822dd439c40895d6ec5e85d309, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
   Died:
     m_PersistentCalls:
       m_Calls: []
@@ -837,7 +864,12 @@ MonoBehaviour:
     health: 0
     attackDamage: 0
     attackRange: 0
-  isPaused: 0
+  isPaused:
+    m_InternalValue: 0
+  networkHealth:
+    m_InternalValue: 100
+  networkMaxHealth:
+    m_InternalValue: 100
   attack: {fileID: 5474638087941986471}
   health: {fileID: 2699903805003489532}
   movement: {fileID: 384037652505755052}
@@ -878,10 +910,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ceb0744d962ed8042bd3602fa83f8d93, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
   moveAudioClip: {fileID: 8300000, guid: d27866295d23131439c9cfbba79ad8ec, type: 3}
   isHasGapTimeBetweenSteps: 0
   speed: 3
-  isMoving: 0
+  isMoving:
+    m_InternalValue: 1
   scanDistance: 1000
   scanLayer:
     serializedVersion: 2

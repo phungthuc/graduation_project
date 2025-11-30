@@ -5,11 +5,11 @@ namespace TheTunnel.CharacterControl
     public class EnemyRunState : ICharacterState
     {
         private static readonly int IsRunning = Animator.StringToHash("isRunning");
-        
+
         public void Enter(CharacterStateManager characterStateManager)
         {
-            EnemyStateManager enemyStateManager = (EnemyStateManager) characterStateManager;
-            enemyStateManager.animator.SetBool(IsRunning, true);
+            EnemyStateManager enemyStateManager = (EnemyStateManager)characterStateManager;
+            enemyStateManager.SetAnimatorBool(IsRunning, true);
         }
 
         public void Exit(CharacterStateManager characterStateManager)

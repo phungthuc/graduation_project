@@ -12,7 +12,7 @@ namespace TheTunnel.Lobby
         {
             TransitionScene.Instance.PlayTransitionScene(GameConstant.SCENE_PLAY_NAME, () =>
             {
-                GameManager.Instance.StartCountDown();
+                // GameManager.Instance.StartCountDown();
             });
         }
     }

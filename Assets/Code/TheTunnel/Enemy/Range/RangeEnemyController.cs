@@ -19,7 +19,9 @@ namespace TheTunnel.Enemy
 
         private void FixedUpdate()
         {
-            if (isPaused)
+            if (!IsServer) return; // Chỉ server điều khiển logic
+
+            if (isPaused.Value)
             {
                 return;
             }

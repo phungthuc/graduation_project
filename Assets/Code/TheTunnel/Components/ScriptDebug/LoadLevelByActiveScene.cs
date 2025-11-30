@@ -31,15 +31,15 @@ namespace TheTunnel.ScriptDebug
 
         public void CheckDefenseLevel()
         {
-            if (PlayerData.Instance.IsDefenseLevelCompleted(PlayerData.Instance.CurrentLevel))
-            {
-                GameObject portal = GameObject.FindFirstObjectByType<DefenseLevelPortal>().gameObject;
-                portal.SetActive(true);
-            }
-            else
-            {
-                GameManager.Instance.StartCountDown();
-            }
+            // if (PlayerData.Instance.IsDefenseLevelCompleted(PlayerData.Instance.CurrentLevel))
+            // {
+            //     GameObject portal = GameObject.FindFirstObjectByType<DefenseLevelPortal>().gameObject;
+            //     portal.SetActive(true);
+            // }
+            // else
+            // {
+            // }
+            GameManager.Instance.StartCountDown();
         }
 
         private IEnumerator DelayLoadLevel()

@@ -494,12 +494,6 @@ namespace cowsins
             // Vì tất cả player visuals (súng, cánh tay) nằm trong Camera, nên cần sync Camera rotation
             if (!IsOwner)
             {
-                // QUAN TRỌNG: Unsubscribe trước để tránh duplicate subscriptions (memory leak)
-                networkDesiredX.OnValueChanged -= OnDesiredXChanged;
-                networkXRotation.OnValueChanged -= OnXRotationChanged;
-                networkCameraTilt.OnValueChanged -= OnCameraTiltChanged;
-
-                // Subscribe lại
                 networkDesiredX.OnValueChanged += OnDesiredXChanged;
                 networkXRotation.OnValueChanged += OnXRotationChanged;
                 networkCameraTilt.OnValueChanged += OnCameraTiltChanged;
@@ -647,19 +641,21 @@ namespace cowsins
 
         public override void OnNetworkDespawn()
         {
-            // QUAN TRỌNG: Unsubscribe từ tất cả network variables để tránh memory leak
-            // Unsubscribe cho cả Owner và Remote players để đảm bảo cleanup hoàn toàn
-            networkDesiredX.OnValueChanged -= OnDesiredXChanged;
-            networkXRotation.OnValueChanged -= OnXRotationChanged;
-            networkCameraTilt.OnValueChanged -= OnCameraTiltChanged;
+            base.OnNetworkDespawn();
+
+            // Unsubscribe from network variable changes
+            if (!IsOwner)
+            {
+                networkDesiredX.OnValueChanged -= OnDesiredXChanged;
+                networkXRotation.OnValueChanged -= OnXRotationChanged;
+                networkCameraTilt.OnValueChanged -= OnCameraTiltChanged;
+            }
 
             // Clear player reference khi despawn
             if (IsOwner && InputManager.inputManager != null)
             {
                 InputManager.inputManager.SetPlayer(null);
             }
-
-            base.OnNetworkDespawn();
         }
 
         /// <summary>
