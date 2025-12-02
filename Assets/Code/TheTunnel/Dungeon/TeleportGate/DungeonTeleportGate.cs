@@ -11,7 +11,7 @@ namespace TheTunnel.Goap
         {
             if (other.gameObject.tag == GameConstant.PLAYER_TAG)
             {
-                TransitionScene.Instance.PlayTransitionScene(GameConstant.SCENE_PLAY_NAME, () => GameManager.Instance.StartCountDown());
+                TransitionScene.Instance.PlayTransitionScene(GameConstant.SCENE_DEFENSE_NAME, () => GameManager.Instance.StartCountDown());
                 this.enabled = false;
             }
         }

@@ -12,7 +12,7 @@ namespace TheTunnel.Custom.cowsins
             if (InputManager.reloading)
             {
                 PlayerData.Instance.ResetData();
-                TransitionScene.Instance.PlayTransitionScene(GameConstant.SCENE_PLAY_NAME, () => GameManager.Instance.StartCountDown());
+                TransitionScene.Instance.PlayTransitionScene(GameConstant.SCENE_DEFENSE_NAME, () => GameManager.Instance.StartCountDown());
             }
         }
     }

@@ -81,5 +81,10 @@ namespace TheTunnel.Manager
             UIEvents.countDownFinished?.Invoke();
             LevelManager.Instance.LoadDefenseLevel(PlayerData.Instance.CurrentLevel);
         }
+
+        public void LoadDungeonLevel()
+        {
+            LevelManager.Instance.LoadDungeonLevel(PlayerData.Instance.CurrentLevel);
+        }
     }
 }

@@ -10,10 +10,6 @@ namespace TheTunnel.Enemy
 
         private void Start()
         {
-            if (PlayerData.Instance.IsDefenseLevelCompleted(PlayerData.Instance.CurrentLevel))
-            {
-                return;
-            }
             _portalGO.SetActive(false);
             _enemyManager.EnemyCleaned.RemoveListener(OnEnemyDefenseLevelCleaned);
             _enemyManager.EnemyCleaned.AddListener(OnEnemyDefenseLevelCleaned);
@@ -21,6 +17,7 @@ namespace TheTunnel.Enemy
 
         private void OnEnemyDefenseLevelCleaned()
         {
+            Debug.Log("OnEnemyDefenseLevelCleaned");
             PlayerData.Instance.SetDefenseLevelCompleted(PlayerData.Instance.CurrentLevel);
             _portalGO.SetActive(true);
         }

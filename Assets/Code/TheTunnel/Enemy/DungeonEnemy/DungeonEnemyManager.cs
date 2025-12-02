@@ -30,7 +30,7 @@ namespace TheTunnel
         {
             currentDungeonData = dungeonData;
             _enemyDiedCount = 0;
-            SpawnPlayer();
+            // SpawnPlayer();
         }
 
         public void SpawnDungeonWave(string zoneName)

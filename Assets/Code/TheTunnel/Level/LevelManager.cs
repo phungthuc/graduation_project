@@ -80,7 +80,7 @@ namespace TheTunnel.Level
             _isExitingDungeonLevel = true;
             PlayerData.Instance.SetDungeonLevelCompleted(PlayerData.Instance.CurrentLevel);
             PlayerData.Instance.CurrentLevel++;
-            TransitionScene.Instance.PlayTransitionScene(GameConstant.SCENE_PLAY_NAME, () =>
+            TransitionScene.Instance.PlayTransitionScene(GameConstant.SCENE_DEFENSE_NAME, () =>
             {
                 _isExitingDungeonLevel = false;
                 GameManager.Instance.StartCountDown();
@@ -156,14 +156,14 @@ namespace TheTunnel.Level
             }
 
             _dungeonEnemyManager.LoadDungeonData(levelData.DungeonData);
-            GameObject dungeon = Resources.Load<GameObject>($"Dungeons/{levelData.DungeonId}");
-            if (dungeon == null)
-            {
-                Debug.LogError($"Failed to load dungeon prefab: {levelData.DungeonId}");
-                return;
-            }
+            // GameObject dungeon = Resources.Load<GameObject>($"Dungeons/{levelData.DungeonId}");
+            // if (dungeon == null)
+            // {
+            //     Debug.LogError($"Failed to load dungeon prefab: {levelData.DungeonId}");
+            //     return;
+            // }
             _isDungeonLevel = true;
-            Instantiate(dungeon);
+            // Instantiate(dungeon);
         }
 
         private void GetLevelDungeonReference()

@@ -31,7 +31,7 @@ namespace TheTunnel.Lobby
 
                 SetStatus("Loading Play scene...");
                 NetworkManager.Singleton.SceneManager.LoadScene(
-                    GameConstant.SCENE_PLAY_NAME,
+                    GameConstant.SCENE_DEFENSE_NAME,
                     UnityEngine.SceneManagement.LoadSceneMode.Single
                 );
             }

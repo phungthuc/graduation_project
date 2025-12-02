@@ -10,7 +10,6 @@ namespace TheTunnel.Player
     {
         [Header("Player Spawn")]
         [SerializeField] private NetworkObject playerPrefab;
-        [SerializeField] private Transform[] spawnPoints;
 
         private bool playersSpawned = false;
 
@@ -38,9 +37,7 @@ namespace TheTunnel.Player
                 gameManager = FindFirstObjectByType<GameManager>();
             }
 
-            // Đảm bảo ta xử lý cho scene Play
-            if (sceneEvent.SceneEventType == SceneEventType.LoadComplete &&
-                sceneEvent.SceneName == GameConstant.SCENE_PLAY_NAME)
+            if (sceneEvent.SceneEventType == SceneEventType.LoadComplete)
             {
                 if (!playersSpawned)
                 {
@@ -62,12 +59,14 @@ namespace TheTunnel.Player
                 Vector3 pos = Vector3.zero;
                 Quaternion rot = Quaternion.identity;
 
-                if (spawnPoints != null && spawnPoints.Length > 0)
+                Transform spawnPoint = GameObject.FindGameObjectWithTag("PlayerSpawnPoint").transform;
+                if (spawnPoint != null)
                 {
-                    int index = i % spawnPoints.Length;
-                    pos = spawnPoints[index].position;
-                    rot = spawnPoints[index].rotation;
+                    pos = spawnPoint.position;
+                    rot = spawnPoint.rotation;
                 }
+
+                Debug.Log("Spawning player at: " + pos + " with rotation: " + rot);
 
                 // Server instantiate Player
                 NetworkObject playerInstance =
@@ -81,9 +80,15 @@ namespace TheTunnel.Player
 
             if (gameManager != null)
             {
-                gameManager.StartCountDown();
+                if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == GameConstant.SCENE_DEFENSE_NAME) //check current scene is defense level
+                {
+                    gameManager.StartCountDown();
+                }
+                else
+                {
+                    gameManager.LoadDungeonLevel();
+                }
             }
         }
     }
-
 }

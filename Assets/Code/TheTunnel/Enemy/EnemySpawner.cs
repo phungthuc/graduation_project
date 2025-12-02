@@ -15,8 +15,11 @@ namespace TheTunnel.Enemy
 
         public event Action EnemySpawned;
         public event Action EnemyDied;
+        public event Action EnemyCleaned;
 
         private Dictionary<string, GameObjectPool<EnemyBase>> _enemyPoolDict = new();
+
+        private int _enemySpawnCount = 0;
 
         private void Awake()
         {
@@ -84,9 +87,16 @@ namespace TheTunnel.Enemy
                     enemy.Died.RemoveListener(onDiedAction);
                     DespawnEnemy(enemy, pool);
                     EnemyDied?.Invoke();
+                    _enemySpawnCount--;
+                    if (_enemySpawnCount <= 0)
+                    {
+                        EnemyCleaned?.Invoke();
+                        _enemySpawnCount = 0;
+                    }
                 };
                 enemy.Died.AddListener(onDiedAction);
                 enemy.OnReset();
+                _enemySpawnCount++;
                 EnemySpawned?.Invoke();
             }
         }

@@ -32,6 +32,7 @@ namespace TheTunnel.Enemy
             }
             _enemySpawner.EnemySpawned += OnEnemySpawned;
             _enemySpawner.EnemyDied += OnEnemyDied;
+            _enemySpawner.EnemyCleaned += OnEnemyCleaned;
         }
 
         private void Update()
@@ -126,10 +127,11 @@ namespace TheTunnel.Enemy
         private void OnEnemyDied()
         {
             _enemyDiedCount++;
-            if (_enemySpawnCount <= _enemyDiedCount && _currentWaveIndex >= _waveDataList.Count - 1)
-            {
-                EnemyCleaned?.Invoke();
-            }
+        }
+
+        private void OnEnemyCleaned()
+        {
+            EnemyCleaned?.Invoke();
         }
     }
 }

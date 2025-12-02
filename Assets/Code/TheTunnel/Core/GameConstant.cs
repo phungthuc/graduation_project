@@ -16,7 +16,7 @@ namespace TheTunnel.Core
 
         public const string SCENE_DUNGEON_NAME = "scene_dungeon";
 
-        public const string SCENE_PLAY_NAME = "scene_play";
+        public const string SCENE_DEFENSE_NAME = "scene_defense";
 
         public const string SCENE_BOOT_NAME = "scene_boot";
 

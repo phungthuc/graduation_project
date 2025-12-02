@@ -10,7 +10,7 @@ namespace TheTunnel.Lobby
         // Update this code to ensure all players are ready to play
         public void LoadPlayScene()
         {
-            TransitionScene.Instance.PlayTransitionScene(GameConstant.SCENE_PLAY_NAME, () =>
+            TransitionScene.Instance.PlayTransitionScene(GameConstant.SCENE_DEFENSE_NAME, () =>
             {
                 // GameManager.Instance.StartCountDown();
             });
