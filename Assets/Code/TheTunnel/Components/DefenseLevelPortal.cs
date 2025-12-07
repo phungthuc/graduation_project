@@ -46,7 +46,7 @@ namespace TheTunnel.Components
                 // Despawn tất cả players trong scene (chỉ Server mới có thể despawn)
                 if (IsServer)
                 {
-                    DespawnAllPlayers();
+                    // DespawnAllPlayers();
                 }
 
                 NetworkManager.Singleton.SceneManager.LoadScene(

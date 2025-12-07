@@ -60,129 +60,171 @@ namespace TheTunnel.Player
             // Đợi một frame để đảm bảo scene đã hoàn toàn load xong
             yield return null;
 
-            // Tìm spawn point với retry logic
-            Transform spawnPoint = null;
-            int maxRetries = 10;
-            int retryCount = 0;
+            // Tìm spawn point
+            Transform spawnPoint = FindSpawnPoint();
+            Vector3 spawnPosition = spawnPoint != null ? spawnPoint.position : Vector3.zero;
+            Quaternion spawnRotation = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
 
-            while (spawnPoint == null && retryCount < maxRetries)
-            {
-                GameObject spawnPointObj = GameObject.FindGameObjectWithTag("PlayerSpawnPoint");
-                if (spawnPointObj != null)
-                {
-                    spawnPoint = spawnPointObj.transform;
-                }
-                else
-                {
-                    retryCount++;
-                    Debug.LogWarning($"Spawn point not found, retrying... ({retryCount}/{maxRetries})");
-                    yield return new WaitForSeconds(0.1f);
-                }
-            }
+            Debug.Log($"Spawn point found at: {spawnPosition} with rotation: {spawnRotation}");
 
-            if (spawnPoint == null)
-            {
-                Debug.LogError("PlayerSpawnPoint not found after retries! Using default position.");
-            }
-
-            Vector3 pos = spawnPoint != null ? spawnPoint.position : Vector3.zero;
-            Quaternion rot = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
-
-            Debug.Log($"Spawn point found at: {pos} with rotation: {rot}");
-
-            // Spawn players cho tất cả clients
+            // Xử lý spawn/update position cho tất cả clients
             foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
             {
                 ulong clientId = client.ClientId;
+                NetworkObject existingPlayer = client.PlayerObject;
 
-                Debug.Log($"Spawning player for client {clientId} at: {pos} with rotation: {rot}");
-
-                // Server instantiate Player
-                NetworkObject playerInstance = Instantiate(playerPrefab, pos, rot);
-
-                // Gắn Player này cho clientId (bao gồm cả Host)
-                playerInstance.SpawnAsPlayerObject(clientId);
-
-                // Đợi một frame để NetworkTransform sync
-                yield return null;
-
-                // Đảm bảo position được set đúng sau khi spawn
-                // Kiểm tra lại position và set lại nếu cần
-                if (playerInstance != null && playerInstance.IsSpawned)
+                if (existingPlayer != null && existingPlayer.IsSpawned)
                 {
-                    // Sử dụng TeleportPlayer nếu có PlayerMovement component
-                    var playerMovement = playerInstance.GetComponent<cowsins.PlayerMovement>();
-                    if (playerMovement != null)
-                    {
-                        playerMovement.TeleportPlayer(pos, rot);
-                        Debug.Log($"Teleported player {clientId} to {pos} via PlayerMovement");
-                    }
-                    else
-                    {
-                        // Fallback: Set trực tiếp transform
-                        // Xử lý CharacterController nếu có
-                        if (playerInstance.TryGetComponent<UnityEngine.CharacterController>(out var characterController))
-                        {
-                            characterController.enabled = false;
-                            playerInstance.transform.position = pos;
-                            playerInstance.transform.rotation = rot;
-                            characterController.enabled = true;
-                        }
-                        else
-                        {
-                            playerInstance.transform.position = pos;
-                            playerInstance.transform.rotation = rot;
-                        }
-                        Debug.Log($"Set player {clientId} position to {pos} via transform");
-                    }
+                    // Client đã có player, chỉ cần update position
+                    Debug.Log($"Client {clientId} already has player. Updating position to spawn point.");
+                    SetPlayerPosition(existingPlayer, spawnPosition, spawnRotation);
 
-                    // Đợi thêm một frame để đảm bảo NetworkTransform đã sync
+                    // Đợi một chút để NetworkTransform sync position đến clients
+                    yield return new WaitForSeconds(0.1f);
+                }
+                else
+                {
+                    // Client chưa có player, spawn mới
+                    Debug.Log($"Spawning new player for client {clientId} at: {spawnPosition}");
+                    NetworkObject newPlayer = Instantiate(playerPrefab, spawnPosition, spawnRotation);
+                    newPlayer.SpawnAsPlayerObject(clientId);
+
+                    // Đợi một frame để spawn hoàn tất
                     yield return null;
 
-                    // Verify position sau khi set và retry nếu cần
-                    if (playerInstance != null && playerInstance.IsSpawned)
+                    // Đảm bảo position được set đúng
+                    if (newPlayer != null && newPlayer.IsSpawned)
                     {
-                        if (Vector3.Distance(playerInstance.transform.position, pos) > 0.1f)
-                        {
-                            Debug.LogWarning($"Player {clientId} position mismatch! Expected: {pos}, Actual: {playerInstance.transform.position}. Retrying...");
-                            // Retry setting position
-                            playerMovement = playerInstance.GetComponent<cowsins.PlayerMovement>();
-                            if (playerMovement != null)
-                            {
-                                playerMovement.TeleportPlayer(pos, rot);
-                            }
-                            else
-                            {
-                                if (playerInstance.TryGetComponent<UnityEngine.CharacterController>(out var characterController))
-                                {
-                                    characterController.enabled = false;
-                                    playerInstance.transform.position = pos;
-                                    playerInstance.transform.rotation = rot;
-                                    characterController.enabled = true;
-                                }
-                                else
-                                {
-                                    playerInstance.transform.position = pos;
-                                    playerInstance.transform.rotation = rot;
-                                }
-                            }
-                        }
+                        SetPlayerPosition(newPlayer, spawnPosition, spawnRotation);
+
+                        // Đợi thêm một chút để NetworkTransform sync position đến clients
+                        yield return new WaitForSeconds(0.1f);
                     }
                 }
             }
 
-            Debug.Log("All players spawned successfully.");
+            Debug.Log("All players processed successfully.");
 
             // Gọi gameManager logic sau khi spawn xong
             if (gameManager != null)
             {
-                if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == GameConstant.SCENE_DEFENSE_NAME) //check current scene is defense level
+                if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == GameConstant.SCENE_DEFENSE_NAME)
                 {
                     gameManager.StartCountDown();
                 }
                 else
                 {
                     gameManager.LoadDungeonLevel();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Tìm spawn point với retry logic
+        /// </summary>
+        private Transform FindSpawnPoint()
+        {
+            GameObject spawnPointObj = GameObject.FindGameObjectWithTag("PlayerSpawnPoint");
+            if (spawnPointObj != null)
+            {
+                return spawnPointObj.transform;
+            }
+
+            Debug.LogWarning("PlayerSpawnPoint not found! Using default position (0,0,0).");
+            return null;
+        }
+
+        /// <summary>
+        /// Set position và rotation cho player (đảm bảo sync đúng cho tất cả clients)
+        /// Sử dụng ClientRpc để đảm bảo client tự set position (có authority)
+        /// </summary>
+        private void SetPlayerPosition(NetworkObject playerObject, Vector3 position, Quaternion rotation)
+        {
+            if (playerObject == null || !playerObject.IsSpawned)
+            {
+                Debug.LogWarning("Cannot set position: Player object is null or not spawned.");
+                return;
+            }
+
+            // Set trên server trước
+            if (playerObject.TryGetComponent<Rigidbody>(out var rigidbody))
+            {
+                playerObject.transform.position = position;
+                playerObject.transform.rotation = rotation;
+                rigidbody.position = position;
+                rigidbody.rotation = rotation;
+                rigidbody.linearVelocity = Vector3.zero;
+                rigidbody.angularVelocity = Vector3.zero;
+            }
+            else
+            {
+                playerObject.transform.position = position;
+                playerObject.transform.rotation = rotation;
+            }
+
+            // Gọi ClientRpc để client tự set position (có authority với NetworkTransform)
+            // Chỉ gửi đến client owner của player này
+            var clientRpcParams = new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new ulong[] { playerObject.OwnerClientId }
+                }
+            };
+            TeleportPlayerClientRpc(playerObject.NetworkObjectId, position, rotation, clientRpcParams);
+
+            Debug.Log($"[Server] Requested teleport for player {playerObject.OwnerClientId} to {position}");
+        }
+
+        /// <summary>
+        /// ClientRpc để client tự teleport player (có authority với NetworkTransform)
+        /// </summary>
+        [ClientRpc]
+        private void TeleportPlayerClientRpc(ulong networkObjectId, Vector3 position, Quaternion rotation, ClientRpcParams rpcParams = default)
+        {
+            // Tìm player object từ networkObjectId
+            if (NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(networkObjectId, out var playerObject))
+            {
+                // Chỉ owner mới có thể teleport với NetworkTransform
+                if (playerObject.IsOwner)
+                {
+                    // Sử dụng NetworkTransform.Teleport() nếu có
+                    var networkTransform = playerObject.GetComponent<Unity.Netcode.Components.NetworkTransform>();
+                    if (networkTransform != null)
+                    {
+                        networkTransform.Teleport(position, rotation, playerObject.transform.localScale);
+                        Debug.Log($"[Client] Teleported own player to {position} via NetworkTransform");
+                    }
+
+                    // Đồng thời set trực tiếp để đảm bảo ngay lập tức
+                    if (playerObject.TryGetComponent<Rigidbody>(out var rigidbody))
+                    {
+                        playerObject.transform.position = position;
+                        playerObject.transform.rotation = rotation;
+                        rigidbody.position = position;
+                        rigidbody.rotation = rotation;
+                        rigidbody.linearVelocity = Vector3.zero;
+                        rigidbody.angularVelocity = Vector3.zero;
+                    }
+                    else
+                    {
+                        playerObject.transform.position = position;
+                        playerObject.transform.rotation = rotation;
+                    }
+
+                    // Cập nhật camera rotation
+                    var playerMovement = playerObject.GetComponent<cowsins.PlayerMovement>();
+                    if (playerMovement != null && playerMovement.playerCam != null)
+                    {
+                        playerMovement.playerCam.rotation = rotation;
+                    }
+                }
+                else
+                {
+                    // Nếu không phải owner, chỉ set transform (NetworkTransform sẽ sync từ owner)
+                    playerObject.transform.position = position;
+                    playerObject.transform.rotation = rotation;
+                    Debug.Log($"[Client] Set remote player position to {position}");
                 }
             }
         }
