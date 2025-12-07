@@ -214,14 +214,26 @@ namespace TheTunnel
         {
             _enemyDiedCount++;
 
-            // Tìm zone của enemy vừa chết (dựa trên zone hiện tại)
-            if (_currentZoneIndex < _zoneList.Count)
+            Debug.Log($"Enemy died. Total: {_enemyDiedCount}/{_enemySpawnCount}");
+
+            // Kiểm tra tất cả zones đã được spawn chưa
+            bool allZonesSpawned = _currentZoneIndex >= _zoneList.Count;
+
+            // Nếu tất cả zones đã spawn và tất cả enemies đã chết, trigger win
+            if (allZonesSpawned && _enemySpawnCount > 0 && _enemyDiedCount >= _enemySpawnCount)
+            {
+                Debug.Log("All dungeon enemies cleaned! Triggering win condition.");
+                EnemyCleaned?.Invoke();
+                return;
+            }
+
+            // Kiểm tra zone hiện tại đã clean chưa (chỉ khi chưa spawn hết zones)
+            if (!allZonesSpawned && _currentZoneIndex < _zoneList.Count)
             {
                 string currentZone = _zoneList[_currentZoneIndex];
-                _zoneDiedCount[currentZone] = _zoneDiedCount.GetValueOrDefault(currentZone, 0) + 1;
-
                 int zoneSpawnCount = _zoneSpawnCount.GetValueOrDefault(currentZone, 0);
-                int zoneDiedCount = _zoneDiedCount[currentZone];
+                int zoneDiedCount = _zoneDiedCount.GetValueOrDefault(currentZone, 0) + 1;
+                _zoneDiedCount[currentZone] = zoneDiedCount;
 
                 Debug.Log($"Enemy died in zone {currentZone}. Zone: {zoneDiedCount}/{zoneSpawnCount}, Total: {_enemyDiedCount}/{_enemySpawnCount}");
 
@@ -240,20 +252,32 @@ namespace TheTunnel
                     }
                     else
                     {
-                        // Tất cả zones đã được spawn và clean
-                        Debug.Log("All dungeon zones cleaned!");
-                        EnemyCleaned?.Invoke();
+                        // Tất cả zones đã được spawn, kiểm tra win condition
+                        Debug.Log("All zones spawned. Checking win condition...");
+                        CheckWinCondition();
                     }
                 }
             }
+            else if (allZonesSpawned)
+            {
+                // Tất cả zones đã spawn, chỉ cần kiểm tra win condition
+                CheckWinCondition();
+            }
+        }
+
+        /// <summary>
+        /// Kiểm tra win condition dựa trên tổng số enemies
+        /// </summary>
+        private void CheckWinCondition()
+        {
+            if (_enemySpawnCount > 0 && _enemyDiedCount >= _enemySpawnCount)
+            {
+                Debug.Log($"Win condition met! All enemies killed: {_enemyDiedCount}/{_enemySpawnCount}");
+                EnemyCleaned?.Invoke();
+            }
             else
             {
-                // Fallback: kiểm tra tổng số enemies
-                if (_enemySpawnCount > 0 && _enemyDiedCount >= _enemySpawnCount)
-                {
-                    Debug.Log("All dungeon enemies cleaned!");
-                    EnemyCleaned?.Invoke();
-                }
+                Debug.Log($"Win condition not met yet. Enemies: {_enemyDiedCount}/{_enemySpawnCount}");
             }
         }
 

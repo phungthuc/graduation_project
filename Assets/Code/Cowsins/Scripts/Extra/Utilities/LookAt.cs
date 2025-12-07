@@ -30,7 +30,7 @@ namespace cowsins
                 // Quay về camera, nhưng chỉ quay theo trục Y (horizontal)
                 Vector3 direction = cameraTransform.position - transform.position;
                 direction.y = 0; // Chỉ quay theo trục Y (horizontal)
-                
+
                 if (direction != Vector3.zero)
                 {
                     transform.rotation = Quaternion.LookRotation(-direction);
@@ -51,17 +51,28 @@ namespace cowsins
         private void FindLocalPlayerCamera()
         {
             // Tìm local player (player của client hiện tại)
-            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
-            
-            foreach (GameObject player in players)
+            // Ưu tiên sử dụng NetworkManager để tìm local player
+            if (NetworkManager.Singleton != null)
             {
-                // Kiểm tra xem player này có phải là local player không
-                NetworkObject networkObject = player.GetComponent<NetworkObject>();
-                if (networkObject != null && networkObject.IsOwner)
+                // Tìm local player qua NetworkManager
+                if (NetworkManager.Singleton.LocalClient != null &&
+                    NetworkManager.Singleton.LocalClient.PlayerObject != null)
                 {
-                    // Tìm camera trong player object
+                    GameObject localPlayer = NetworkManager.Singleton.LocalClient.PlayerObject.gameObject;
+                    Player = localPlayer.transform; // Set player transform làm fallback
+
+                    // Cách 1: Tìm camera qua WeaponController (cách tốt nhất)
+                    var weaponController = localPlayer.GetComponent<WeaponController>();
+                    if (weaponController != null && weaponController.mainCamera != null)
+                    {
+                        localPlayerCamera = weaponController.mainCamera;
+                        cameraTransform = weaponController.mainCamera.transform;
+                        return;
+                    }
+
+                    // Cách 2: Tìm camera trong player object
                     // Camera thường nằm trong: Player -> CameraPivot -> CameraContainer -> Main Camera
-                    Transform cameraPivot = player.transform.Find("CameraPivot");
+                    Transform cameraPivot = localPlayer.transform.Find("CameraPivot");
                     if (cameraPivot != null)
                     {
                         Transform cameraContainer = cameraPivot.Find("CameraContainer");
@@ -71,17 +82,61 @@ namespace cowsins
                             if (mainCameraTransform != null)
                             {
                                 localPlayerCamera = mainCameraTransform.GetComponent<Camera>();
-                                if (localPlayerCamera != null)
+                                if (localPlayerCamera != null && localPlayerCamera.enabled)
                                 {
                                     cameraTransform = mainCameraTransform;
-                                    Player = player.transform; // Set player transform làm fallback
                                     return;
                                 }
                             }
                         }
                     }
 
-                    // Nếu không tìm thấy theo đường dẫn trên, thử tìm Camera component trực tiếp
+                    // Cách 3: Tìm tất cả Camera components trong player và chọn Main Camera
+                    Camera[] cameras = localPlayer.GetComponentsInChildren<Camera>(true);
+                    foreach (Camera cam in cameras)
+                    {
+                        // Ưu tiên camera có tag "MainCamera" hoặc tên "Main Camera"
+                        if (cam.enabled && cam.gameObject.activeInHierarchy)
+                        {
+                            if (cam.CompareTag("MainCamera") || cam.name.Contains("Main Camera"))
+                            {
+                                localPlayerCamera = cam;
+                                cameraTransform = cam.transform;
+                                return;
+                            }
+                        }
+                    }
+
+                    // Cách 4: Lấy camera đầu tiên enabled
+                    foreach (Camera cam in cameras)
+                    {
+                        if (cam.enabled && cam.gameObject.activeInHierarchy)
+                        {
+                            localPlayerCamera = cam;
+                            cameraTransform = cam.transform;
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Fallback: Tìm bằng tag "Player" (cho trường hợp không có NetworkManager)
+            GameObject[] players = GameObject.FindGameObjectsWithTag("Player");
+            foreach (GameObject player in players)
+            {
+                NetworkObject networkObject = player.GetComponent<NetworkObject>();
+                if (networkObject != null && networkObject.IsOwner)
+                {
+                    Player = player.transform; // Set player transform làm fallback
+
+                    var weaponController = player.GetComponent<WeaponController>();
+                    if (weaponController != null && weaponController.mainCamera != null)
+                    {
+                        localPlayerCamera = weaponController.mainCamera;
+                        cameraTransform = weaponController.mainCamera.transform;
+                        return;
+                    }
+
                     Camera[] cameras = player.GetComponentsInChildren<Camera>(true);
                     foreach (Camera cam in cameras)
                     {
@@ -89,18 +144,23 @@ namespace cowsins
                         {
                             localPlayerCamera = cam;
                             cameraTransform = cam.transform;
-                            Player = player.transform; // Set player transform làm fallback
                             return;
                         }
                     }
                 }
             }
 
-            // Fallback: Nếu không tìm thấy local player camera, sử dụng Camera.main
+            // Fallback cuối cùng: Sử dụng Camera.main hoặc tìm player transform
             if (localPlayerCamera == null && Camera.main != null)
             {
                 localPlayerCamera = Camera.main;
                 cameraTransform = Camera.main.transform;
+            }
+
+            // Fallback: Tìm player transform nếu chưa có
+            if (Player == null)
+            {
+                Player = GameObject.FindGameObjectWithTag("Player")?.transform;
             }
         }
     }

@@ -23,31 +23,26 @@ namespace TheTunnel.GOAP
             Transform nearestPlayer = null;
             float nearestDistance = float.MaxValue;
 
-            // Tìm tất cả players trong multiplayer
-            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+            // CHỈ tìm players trên server (GOAP system có thể chạy trên client nhưng sensor chỉ nên chạy trên server)
+            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer)
             {
-                foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
-                {
-                    if (client.PlayerObject != null && client.PlayerObject.IsSpawned)
-                    {
-                        Transform playerTransform = client.PlayerObject.transform;
-                        float distance = Vector3.Distance(agentPosition, playerTransform.position);
-
-                        if (distance < nearestDistance)
-                        {
-                            nearestDistance = distance;
-                            nearestPlayer = playerTransform;
-                        }
-                    }
-                }
+                // Nếu không phải server, return null (sensor không nên chạy trên client)
+                return null;
             }
-            else
+
+            // Tìm tất cả players trong multiplayer
+            foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
             {
-                // Fallback: tìm bằng tag nếu không có NetworkManager
-                GameObject playerObj = GameObject.FindGameObjectWithTag("Player");
-                if (playerObj != null)
+                if (client.PlayerObject != null && client.PlayerObject.IsSpawned)
                 {
-                    nearestPlayer = playerObj.transform;
+                    Transform playerTransform = client.PlayerObject.transform;
+                    float distance = Vector3.Distance(agentPosition, playerTransform.position);
+
+                    if (distance < nearestDistance)
+                    {
+                        nearestDistance = distance;
+                        nearestPlayer = playerTransform;
+                    }
                 }
             }
 
@@ -56,6 +51,12 @@ namespace TheTunnel.GOAP
 
         public override ITarget Sense(IMonoAgent agent, IComponentReference references)
         {
+            // CHỈ chạy trên server
+            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer)
+            {
+                return null;
+            }
+
             // Tìm player gần nhất với agent position
             _playerTransform = FindNearestPlayer(agent.transform.position);
 

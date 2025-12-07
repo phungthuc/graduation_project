@@ -22,6 +22,12 @@ namespace TheTunnel.GOAP
 
         public override ActionRunState Perform(IMonoAgent agent, CommonData data, ActionContext context)
         {
+            // Kiểm tra null để tránh NullReferenceException
+            if (data == null || data.Target == null || _attackConfig == null)
+            {
+                return ActionRunState.Stop;
+            }
+
             if (Vector3.Distance(agent.transform.position, data.Target.Position) <= _attackConfig.attackRange)
             {
                 return ActionRunState.Stop;

@@ -51,6 +51,7 @@ namespace TheTunnel.Enemy.DungeonEnemy
             PlayerData.Instance.SetDungeonLevelCompleted(PlayerData.Instance.CurrentLevel);
             PlayerData.Instance.CurrentLevel++;
             teleportGate.SetActive(true);
+            //teleport player to the main scene and clear all players
         }
     }
 }

@@ -32,6 +32,21 @@ namespace TheTunnel.Enemy
 
             // Start coroutine để check và subscribe
             StartCoroutine(SubscribeWhenReady());
+
+            // Setup health bar billboard (chạy trên tất cả clients)
+            // Sử dụng coroutine để đảm bảo healthSlider đã được khởi tạo
+            StartCoroutine(SetupHealthBarBillboardDelayed());
+        }
+
+        /// <summary>
+        /// Setup health bar billboard với delay để đảm bảo healthSlider đã được khởi tạo
+        /// </summary>
+        private System.Collections.IEnumerator SetupHealthBarBillboardDelayed()
+        {
+            // Đợi một frame để đảm bảo healthSlider đã được khởi tạo từ base.Start()
+            yield return null;
+
+            SetupHealthBarBillboard();
         }
 
         private void OnDisable()
@@ -63,6 +78,60 @@ namespace TheTunnel.Enemy
             if (networkObject != null && networkObject.IsSpawned && enemyBase != null && !_isSubscribed)
             {
                 SubscribeToNetworkVariables();
+            }
+
+            // Đảm bảo health bar có script LookAt để quay về local player camera
+            SetupHealthBarBillboard();
+        }
+
+        /// <summary>
+        /// Setup health bar billboard để quay về local player camera
+        /// Script này chạy trên TẤT CẢ clients (không chỉ server) để mỗi client thấy health bar quay về camera của mình
+        /// </summary>
+        private void SetupHealthBarBillboard()
+        {
+            if (healthSlider == null) return;
+
+            // Tìm parent Canvas (thường là Canvas chứa health slider)
+            // Health slider thường nằm trong: Enemy -> Canvas -> HealthSlider
+            Transform currentTransform = healthSlider.transform;
+            Canvas canvas = null;
+
+            // Tìm Canvas parent (có thể là parent trực tiếp hoặc parent của parent)
+            while (currentTransform != null && canvas == null)
+            {
+                canvas = currentTransform.GetComponent<Canvas>();
+                if (canvas == null)
+                {
+                    currentTransform = currentTransform.parent;
+                }
+            }
+
+            // Nếu không tìm thấy Canvas, sử dụng parent của healthSlider
+            Transform healthBarParent = canvas != null ? canvas.transform : healthSlider.transform.parent;
+            if (healthBarParent == null)
+            {
+                // Nếu không có parent, sử dụng chính healthSlider transform
+                healthBarParent = healthSlider.transform;
+            }
+
+            // Kiểm tra xem đã có script LookAt hoặc HealthBarBillboard chưa
+            var existingLookAt = healthBarParent.GetComponent<cowsins.LookAt>();
+            var existingBillboard = healthBarParent.GetComponent<TheTunnel.UI.HealthBarBillboard>();
+
+            // Nếu chưa có script nào, thêm HealthBarBillboard
+            // QUAN TRỌNG: Script này chạy trên TẤT CẢ clients, không chỉ server
+            // Mỗi client sẽ có HealthBarBillboard riêng để quay health bar về camera của chính họ
+            if (existingBillboard == null)
+            {
+                // Thêm HealthBarBillboard (ưu tiên hơn LookAt vì có logic tìm camera tốt hơn)
+                healthBarParent.gameObject.AddComponent<TheTunnel.UI.HealthBarBillboard>();
+
+                // Nếu có LookAt cũ, disable nó để tránh conflict
+                if (existingLookAt != null)
+                {
+                    existingLookAt.enabled = false;
+                }
             }
         }
 

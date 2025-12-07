@@ -17,17 +17,26 @@ namespace TheTunnel.Enemy
         {
             health.events.OnDeath.RemoveListener(OnDied);
             health.events.OnDeath.AddListener(OnDied);
-            stateManager.SetRunning(false);
+            if (stateManager)
+            {
+                stateManager.SetRunning(false);
+            }
         }
 
         private void FixedUpdate()
         {
             if (!IsServer) return; // Chỉ server điều khiển logic
 
+            if (!attack || !movement || !stateManager || !health)
+            {
+                return;
+            }
+
             if (isPaused.Value)
             {
                 return;
             }
+
             if (attack.FindTargetInRange() != null || stateManager.isAttacking)
             {
                 HandleAttack();

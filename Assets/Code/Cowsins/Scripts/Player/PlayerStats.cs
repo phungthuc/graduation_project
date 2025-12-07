@@ -94,15 +94,19 @@ namespace cowsins
         /// </summary>
         public void Damage(float _damage, bool isHeadshot)
         {
+            // CHỈ server mới xử lý damage (tránh duplicate damage trên các clients)
+            // Điều này đảm bảo chỉ player bị tấn công mới nhận damage, không phải tất cả players
+            if (!IsServer)
+            {
+                return;
+            }
+
             // Early return if player is dashing with damage protection
             if (player.canDash && player.dashing && player.damageProtectionWhileDashing)
                 return;
 
             // Ensure damage is a positive value
             float damage = Mathf.Abs(_damage);
-
-            // Trigger damage event
-            events.OnDamage.Invoke();
 
             // Apply damage to shield first
             if (damage <= shield)
@@ -117,8 +121,16 @@ namespace cowsins
                 health -= damage;
             }
 
-            // Notify UI about the health change
-            UIEvents.onHealthChanged?.Invoke(health, shield, true);
+            // Sync damage effects và UI đến owner client (để hiển thị visual feedback)
+            // Sử dụng ClientRpcParams để chỉ gửi đến owner của player này
+            ClientRpcParams clientRpcParams = new ClientRpcParams
+            {
+                Send = new ClientRpcSendParams
+                {
+                    TargetClientIds = new ulong[] { OwnerClientId }
+                }
+            };
+            DamageEffectsClientRpc(health, shield, isHeadshot, clientRpcParams);
 
             // Handle auto-healing
             if (enableAutoHeal && restartAutoHealAfterBeingDamaged)
@@ -126,6 +138,23 @@ namespace cowsins
                 CancelInvoke(nameof(AutoHeal));
                 InvokeRepeating(nameof(AutoHeal), restartAutoHealTime, healRate);
             }
+        }
+
+        /// <summary>
+        /// ClientRpc để sync damage effects và UI đến owner client
+        /// </summary>
+        [ClientRpc]
+        private void DamageEffectsClientRpc(float newHealth, float newShield, bool isHeadshot, ClientRpcParams rpcParams = default)
+        {
+            // Update health và shield từ server
+            health = newHealth;
+            shield = newShield;
+
+            // Trigger damage event để hiển thị visual feedback (màn hình nhấp nháy đỏ)
+            events.OnDamage.Invoke();
+
+            // Notify UI about the health change (để update health bar và visual effects)
+            UIEvents.onHealthChanged?.Invoke(health, shield, true);
         }
 
 
