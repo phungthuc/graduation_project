@@ -17,10 +17,10 @@
       "playerPosition": "-8,-12,-280",
       "enemySpawnData": {
         "longHall": {
-          "spawnPosition": "0,0,0",
+          "spawnPosition": "-18,-10,-180",
           "enemyData": [
             {
-              "enemyId": "spider",
+              "enemyId": "melee",
               "amount": 10
             }
           ]

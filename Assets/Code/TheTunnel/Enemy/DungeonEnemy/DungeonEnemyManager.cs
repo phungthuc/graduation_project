@@ -9,32 +9,113 @@ namespace TheTunnel
 {
     public class DungeonEnemyManager : MonoBehaviour
     {
-
         [SerializeField] private List<Vector3> spawnPositions;
         public UnityEvent EnemyCleaned;
+
         private DungeonEnemySpawner _enemySpawner;
         private int _enemySpawnCount;
         private int _enemyDiedCount;
         private DungeonData currentDungeonData;
+        private bool _isPaused;
+
+        // Wave system (tương tự EnemyManager)
+        private List<string> _zoneList; // Danh sách zones để spawn tuần tự
+        private int _currentZoneIndex;
+        private Dictionary<string, int> _zoneSpawnCount; // Track spawn count cho mỗi zone
+        private Dictionary<string, int> _zoneDiedCount; // Track died count cho mỗi zone
+
         private void Awake()
         {
             _enemySpawner = GetComponent<DungeonEnemySpawner>();
             if (_enemySpawner == null)
             {
-                Debug.LogError("EnemySpawner component not found");
+                Debug.LogError("DungeonEnemySpawner component not found");
+                return;
             }
+
+            // Subscribe to spawner events (tương tự EnemyManager)
+            _enemySpawner.EnemySpawned += OnEnemySpawned;
             _enemySpawner.EnemyDied += OnEnemyDied;
         }
 
-        public void LoadDungeonData(DungeonData dungeonData)
+        private void OnDestroy()
         {
-            currentDungeonData = dungeonData;
-            _enemyDiedCount = 0;
-            // SpawnPlayer();
+            // Unsubscribe để tránh memory leak
+            if (_enemySpawner != null)
+            {
+                _enemySpawner.EnemySpawned -= OnEnemySpawned;
+                _enemySpawner.EnemyDied -= OnEnemyDied;
+            }
         }
 
+        /// <summary>
+        /// Load dungeon data và spawn zone đầu tiên (tương tự LoadWaveData trong EnemyManager)
+        /// </summary>
+        public void LoadDungeonData(DungeonData dungeonData)
+        {
+            // Chỉ server mới load và spawn enemies (tương tự EnemyManager)
+            if (Unity.Netcode.NetworkManager.Singleton != null &&
+                !Unity.Netcode.NetworkManager.Singleton.IsServer)
+            {
+                return;
+            }
+
+            currentDungeonData = dungeonData;
+            _enemySpawnCount = 0;
+            _enemyDiedCount = 0;
+            _isPaused = false;
+
+            // Khởi tạo zone list từ dungeon data (tương tự wave list)
+            _zoneList = new List<string>(dungeonData.EnemySpawnData.Keys);
+            _currentZoneIndex = 0;
+            _zoneSpawnCount = new Dictionary<string, int>();
+            _zoneDiedCount = new Dictionary<string, int>();
+
+            Debug.Log($"Loaded dungeon data for level. Zones: {_zoneList.Count}");
+
+            // Spawn zone đầu tiên ngay lập tức (tương tự spawn wave đầu tiên)
+            if (_zoneList.Count > 0)
+            {
+                SpawnDungeonWave(_zoneList[_currentZoneIndex]);
+            }
+        }
+
+        /// <summary>
+        /// Alias method để tương thích với LevelManager (LoadDungeonData3)
+        /// </summary>
+        public void LoadDungeonData3(DungeonData dungeonData)
+        {
+            LoadDungeonData(dungeonData);
+        }
+
+        /// <summary>
+        /// Stop spawning enemies (tương tự StopWave trong EnemyManager)
+        /// </summary>
+        public void StopWave()
+        {
+            _isPaused = true;
+            // Có thể thêm logic stop enemies nếu cần
+            Debug.Log("Dungeon enemy spawning stopped");
+        }
+
+        /// <summary>
+        /// Spawn enemies cho một zone (tương tự SpawnWave trong EnemyManager)
+        /// </summary>
         public void SpawnDungeonWave(string zoneName)
         {
+            // Chỉ server mới spawn enemies (tương tự EnemyManager)
+            if (Unity.Netcode.NetworkManager.Singleton != null &&
+                !Unity.Netcode.NetworkManager.Singleton.IsServer)
+            {
+                return;
+            }
+
+            if (_isPaused)
+            {
+                Debug.LogWarning("Enemy spawning is paused");
+                return;
+            }
+
             if (currentDungeonData == null ||
                 !currentDungeonData.EnemySpawnData.ContainsKey(zoneName))
             {
@@ -43,28 +124,136 @@ namespace TheTunnel
             }
 
             var spawnData = currentDungeonData.EnemySpawnData[zoneName];
+
+            // Parse spawn position từ JSON
+            Vector3 baseSpawnPosition = ParseStringToVector3(spawnData.SpawnPosition);
+
+            Debug.Log($"Spawning enemies for zone: {zoneName} at position: {baseSpawnPosition}");
+
+            // Reset tracking cho zone này
+            int zoneSpawnCount = 0;
+            _zoneSpawnCount[zoneName] = 0;
+            _zoneDiedCount[zoneName] = 0;
+
             foreach (var enemyData in spawnData.EnemyData)
             {
+                // Spawn từng enemy với đúng ID và position (có delay như EnemyManager)
                 for (int i = 0; i < enemyData.Amount; i++)
                 {
-                    SpawnEnemy(enemyData.Id);
+                    // Randomize position xung quanh base position
+                    Vector3 spawnPosition = GetSpawnPosition(baseSpawnPosition, enemyData.Amount, i);
+
+                    // Spawn với delay ngẫu nhiên (tương tự EnemyManager)
+                    float delay = UnityEngine.Random.Range(0, 2f);
+                    StartCoroutine(SpawnEnemyWithDelay(enemyData.Id, spawnPosition, delay));
+                    zoneSpawnCount++;
                 }
-                _enemySpawnCount += enemyData.Amount;
             }
+
+            _zoneSpawnCount[zoneName] = zoneSpawnCount;
+            _enemySpawnCount += zoneSpawnCount;
+            Debug.Log($"Spawned {zoneSpawnCount} enemies for zone: {zoneName}. Total enemies: {_enemySpawnCount}");
         }
 
-        private void SpawnEnemy(string enemyId)
+        /// <summary>
+        /// Spawn enemy với delay (tương tự EnemyManager)
+        /// </summary>
+        private System.Collections.IEnumerator SpawnEnemyWithDelay(string enemyId, Vector3 position, float delay)
         {
-            Vector3 randomPosition = new Vector3(-4, -20, 27);
-            _enemySpawner.Spawn(enemyId, randomPosition);
+            yield return new WaitForSeconds(delay);
+            SpawnEnemy(enemyId, position);
         }
 
+        /// <summary>
+        /// Lấy spawn position cho enemy (có thể randomize xung quanh base position nếu có nhiều enemy)
+        /// </summary>
+        private Vector3 GetSpawnPosition(Vector3 basePosition, int totalAmount, int currentIndex)
+        {
+            // Nếu chỉ có 1 enemy, spawn tại đúng vị trí
+            if (totalAmount == 1)
+            {
+                return basePosition;
+            }
+
+            // Nếu có nhiều enemy, randomize position xung quanh base position
+            // Tạo một vòng tròn xung quanh base position
+            float angle = (360f / totalAmount) * currentIndex;
+            float radius = UnityEngine.Random.Range(1f, 3f); // Random radius từ 1-3 units
+
+            float xOffset = Mathf.Cos(angle * Mathf.Deg2Rad) * radius;
+            float zOffset = Mathf.Sin(angle * Mathf.Deg2Rad) * radius;
+
+            return basePosition + new Vector3(xOffset, 0, zOffset);
+        }
+
+        private void SpawnEnemy(string enemyId, Vector3 position)
+        {
+            if (string.IsNullOrEmpty(enemyId))
+            {
+                Debug.LogWarning($"Invalid enemy ID: {enemyId}");
+                return;
+            }
+
+            Debug.Log($"Spawning enemy: {enemyId} at position: {position}");
+            _enemySpawner.Spawn(enemyId, position);
+        }
+
+        /// <summary>
+        /// Callback khi enemy được spawn (tương tự EnemyManager)
+        /// </summary>
+        private void OnEnemySpawned()
+        {
+            // Tracking được xử lý trong SpawnDungeonWave
+            // Có thể thêm logic khác nếu cần
+        }
+
+        /// <summary>
+        /// Callback khi enemy chết (tương tự EnemyManager)
+        /// </summary>
         private void OnEnemyDied()
         {
             _enemyDiedCount++;
-            if (_enemyDiedCount >= _enemySpawnCount)
+
+            // Tìm zone của enemy vừa chết (dựa trên zone hiện tại)
+            if (_currentZoneIndex < _zoneList.Count)
             {
-                EnemyCleaned?.Invoke();
+                string currentZone = _zoneList[_currentZoneIndex];
+                _zoneDiedCount[currentZone] = _zoneDiedCount.GetValueOrDefault(currentZone, 0) + 1;
+
+                int zoneSpawnCount = _zoneSpawnCount.GetValueOrDefault(currentZone, 0);
+                int zoneDiedCount = _zoneDiedCount[currentZone];
+
+                Debug.Log($"Enemy died in zone {currentZone}. Zone: {zoneDiedCount}/{zoneSpawnCount}, Total: {_enemyDiedCount}/{_enemySpawnCount}");
+
+                // Kiểm tra nếu zone hiện tại đã clean
+                if (zoneSpawnCount > 0 && zoneDiedCount >= zoneSpawnCount)
+                {
+                    Debug.Log($"Zone {currentZone} cleaned!");
+
+                    // Spawn zone tiếp theo (tương tự spawn wave tiếp theo)
+                    _currentZoneIndex++;
+                    if (_currentZoneIndex < _zoneList.Count)
+                    {
+                        string nextZone = _zoneList[_currentZoneIndex];
+                        Debug.Log($"Spawning next zone: {nextZone}");
+                        SpawnDungeonWave(nextZone);
+                    }
+                    else
+                    {
+                        // Tất cả zones đã được spawn và clean
+                        Debug.Log("All dungeon zones cleaned!");
+                        EnemyCleaned?.Invoke();
+                    }
+                }
+            }
+            else
+            {
+                // Fallback: kiểm tra tổng số enemies
+                if (_enemySpawnCount > 0 && _enemyDiedCount >= _enemySpawnCount)
+                {
+                    Debug.Log("All dungeon enemies cleaned!");
+                    EnemyCleaned?.Invoke();
+                }
             }
         }
 

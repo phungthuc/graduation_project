@@ -314,6 +314,7 @@ GameObject:
   - component: {fileID: 5087810473509404105}
   - component: {fileID: 8593765978622001795}
   - component: {fileID: 4726327986506374441}
+  - component: {fileID: 1568911719746416823}
   m_Layer: 7
   m_Name: prefab_enemy_golem
   m_TagString: Enemy
@@ -632,6 +633,21 @@ MonoBehaviour:
     TriggerNameHash: 1203776827
     TransitionIndex: 1
   m_Animator: {fileID: 1686152369217930460}
+--- !u!114 &1568911719746416823
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4346138806647977794}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e8d0727d5ae3244e3b569694d3912374, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  ShowTopMostFoldoutHeaderGroup: 1
+  TransitionStateInfoList: []
+  m_Animator: {fileID: 6993335054238579584}
 --- !u!1 &5220916088370630075
 GameObject:
   m_ObjectHideFlags: 0

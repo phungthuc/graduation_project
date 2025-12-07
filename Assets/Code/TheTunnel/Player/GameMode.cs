@@ -41,7 +41,7 @@ namespace TheTunnel.Player
             {
                 if (!playersSpawned)
                 {
-                    playersSpawned = true;
+                    // playersSpawned = true;
                     SpawnPlayersForAllClients();
                 }
             }

@@ -52,6 +52,14 @@ namespace TheTunnel.Pool
             T obj = Object.Instantiate(_prefab, _holderTransform);
             obj.transform.rotation = Quaternion.identity;
             obj.gameObject.SetActive(false);
+
+            // Disable NavMeshAgent để tránh warning khi instantiate ở vị trí không có NavMesh
+            var navMeshAgent = obj.GetComponent<UnityEngine.AI.NavMeshAgent>();
+            if (navMeshAgent != null)
+            {
+                navMeshAgent.enabled = false;
+            }
+
             _objectStack.Push(obj);
             _onObjectCreated?.Invoke(obj);
             return obj;

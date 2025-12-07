@@ -94,7 +94,7 @@ namespace TheTunnel.Level
             {
                 levelIndex = GameConfig.Instance.LevelDataList.Count - 1;
             }
-            GetLevelDefenseReference();
+            GetEnemyManagerReference();
             LevelData levelData = GameConfig.Instance.LevelDataList[levelIndex];
             if (levelData == null)
             {
@@ -111,7 +111,7 @@ namespace TheTunnel.Level
             _enemyManager.StopWave();
         }
 
-        private void GetLevelDefenseReference()
+        private void GetEnemyManagerReference()
         {
             _enemyManager = FindAnyObjectByType<EnemyManager>();
             if (_enemyManager == null)

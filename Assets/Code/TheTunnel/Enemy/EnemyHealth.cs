@@ -20,6 +20,16 @@ namespace TheTunnel.Enemy
 
         private void OnEnable()
         {
+            // Đảm bảo enemyBase được khởi tạo khi object được enable (từ pool)
+            if (enemyBase == null)
+            {
+                enemyBase = GetComponent<EnemyBase>();
+            }
+            if (networkObject == null)
+            {
+                networkObject = GetComponent<NetworkObject>();
+            }
+
             // Start coroutine để check và subscribe
             StartCoroutine(SubscribeWhenReady());
         }
@@ -140,28 +150,65 @@ namespace TheTunnel.Enemy
         // Override Damage method để xử lý qua network
         public override void Damage(float damageAmount, bool isHeadshot = false)
         {
+            // Lazy initialization: Nếu enemyBase null, thử GetComponent lại (có thể object được lấy từ pool)
+            if (enemyBase == null)
+            {
+                enemyBase = GetComponent<EnemyBase>();
+            }
+
+            // Kiểm tra NetworkManager
+            if (NetworkManager.Singleton == null)
+            {
+                Debug.LogWarning("EnemyHealth.Damage: NetworkManager.Singleton is null");
+                return;
+            }
+
+            // Kiểm tra enemyBase sau khi lazy init
+            if (enemyBase == null)
+            {
+                Debug.LogWarning($"EnemyHealth.Damage: enemyBase is null on GameObject {gameObject.name}. Enemy may not have EnemyBase component.");
+                return;
+            }
+
             // Nếu là client, gửi request đến server
-            if (!IsServer() && enemyBase != null)
+            if (!NetworkManager.Singleton.IsServer)
             {
                 DamageServerRpc(damageAmount, isHeadshot);
                 return;
             }
 
-            // Server xử lý damage
-            if (!IsServer() || enemyBase == null) return;
-
+            // Server xử lý damage trực tiếp
             ApplyDamage(damageAmount, isHeadshot);
         }
 
         [ServerRpc(RequireOwnership = false)]
         private void DamageServerRpc(float damageAmount, bool isHeadshot, ServerRpcParams rpcParams = default)
         {
+            // Lazy initialization trong ServerRpc (có thể được gọi từ client)
+            if (enemyBase == null)
+            {
+                enemyBase = GetComponent<EnemyBase>();
+            }
+
+            if (enemyBase == null)
+            {
+                Debug.LogWarning($"EnemyHealth.DamageServerRpc: enemyBase is null on GameObject {gameObject.name}");
+                return;
+            }
+
             ApplyDamage(damageAmount, isHeadshot);
         }
 
         private void ApplyDamage(float damageAmount, bool isHeadshot)
         {
             if (isDead) return;
+
+            // Đảm bảo enemyBase không null
+            if (enemyBase == null)
+            {
+                Debug.LogWarning($"EnemyHealth.ApplyDamage: enemyBase is null on GameObject {gameObject.name}");
+                return;
+            }
 
             float oldHealth = health;
             float oldShield = shield;
