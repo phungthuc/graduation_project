@@ -14,10 +14,10 @@ namespace TheTunnel.Custom.cowsins
             {
                 PlayerData.Instance.ResetData();
                 // TransitionScene.Instance.PlayTransitionScene(GameConstant.SCENE_DEFENSE_NAME, () => GameManager.Instance.StartCountDown());
-                NetworkManager.Singleton.SceneManager.LoadScene(
-                        GameConstant.SCENE_MAIN_NAME,
-                        UnityEngine.SceneManagement.LoadSceneMode.Single
-                    );
+                // NetworkManager.Singleton.SceneManager.LoadScene(
+                //         GameConstant.SCENE_MAIN_NAME,
+                //         UnityEngine.SceneManagement.LoadSceneMode.Single
+                //     );
             }
         }
     }

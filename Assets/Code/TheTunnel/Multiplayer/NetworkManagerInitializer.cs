@@ -2,6 +2,7 @@ using UnityEngine;
 using Unity.Netcode;
 using Unity.Services.Multiplayer;
 using System;
+using UnityEngine.SceneManagement;
 
 namespace TheTunnel.Multiplayer
 {
@@ -12,9 +13,19 @@ namespace TheTunnel.Multiplayer
     public class NetworkManagerInitializer : MonoBehaviour
     {
         private static bool _isInitialized = false;
+        private static string _lastSceneName = "";
 
         void Awake()
         {
+            // Reset _isInitialized nếu scene đã thay đổi (để đảm bảo NetworkManager được reset khi về main scene)
+            string currentSceneName = SceneManager.GetActiveScene().name;
+            if (_lastSceneName != "" && _lastSceneName != currentSceneName)
+            {
+                Debug.Log($"[NetworkManagerInitializer] Scene changed from {_lastSceneName} to {currentSceneName}. Resetting initialization state.");
+                _isInitialized = false;
+            }
+            _lastSceneName = currentSceneName;
+
             if (_isInitialized) return;
 
             // Đảm bảo NetworkManager tồn tại và được cấu hình đúng
@@ -87,7 +98,8 @@ namespace TheTunnel.Multiplayer
 
         void OnDestroy()
         {
-            _isInitialized = false;
+            // Không reset _isInitialized ở đây vì có thể có nhiều instances
+            // Chỉ reset khi scene thay đổi trong Awake()
         }
     }
 }

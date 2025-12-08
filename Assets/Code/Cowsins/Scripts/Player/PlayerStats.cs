@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Events;
 using cowsins;
 using Unity.Netcode;
+using System.Reflection;
 namespace cowsins
 {
     [System.Serializable]
@@ -80,7 +81,7 @@ namespace cowsins
             if (!IsOwner) return;
             Controllable = controllable;
 
-            if (stats.isDead) return; // If player is alive, continue
+            if (stats.isDead) return; // If player is dead, continue
 
             if (health <= 0) Die(); // Die in case we ran out of health   
 
@@ -195,6 +196,106 @@ namespace cowsins
         {
             isDead = true;
             events.OnDeath.Invoke(); // Invoke a custom event
+
+            // Gửi ServerRpc để thông báo server về cái chết của player này
+            // Server sẽ broadcast đến tất cả clients để hiển thị màn hình Lose
+            if (IsOwner)
+            {
+                NotifyPlayerDeathServerRpc();
+            }
+        }
+
+        /// <summary>
+        /// ServerRpc để thông báo server khi một player chết
+        /// </summary>
+        [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Owner)]
+        private void NotifyPlayerDeathServerRpc()
+        {
+            // Broadcast đến tất cả clients để hiển thị màn hình Lose
+            ShowLoseScreenClientRpc();
+        }
+
+        /// <summary>
+        /// ClientRpc để hiển thị màn hình Lose cho tất cả players
+        /// </summary>
+        [ClientRpc]
+        private void ShowLoseScreenClientRpc()
+        {
+            // Mỗi client sẽ trigger OnDeath event trên TẤT CẢ PlayerStats instances để đảm bảo
+            // tất cả players đều thấy màn hình Lose (mỗi player có lose screen riêng trong prefab)
+            PlayerStats[] allPlayerStats = FindObjectsByType<PlayerStats>(FindObjectsSortMode.None);
+
+            foreach (var playerStats in allPlayerStats)
+            {
+                if (playerStats != null && !playerStats.isDead)
+                {
+                    // Set isDead = true
+                    playerStats.isDead = true;
+
+                    // Disable control để ngăn players bắn súng, di chuyển, etc.
+                    playerStats.LoseControl();
+
+                    // Trigger OnDeath event để hiển thị màn hình Lose
+                    // Event này đã được setup trong prefab để activate lose screen GameObject
+                    playerStats.events.OnDeath?.Invoke();
+                }
+            }
+
+            // Bắt đầu countdown từ 5->0 trên tất cả clients
+            // Chỉ bắt đầu countdown một lần (từ instance đầu tiên)
+            if (allPlayerStats.Length > 0 && allPlayerStats[0] != null)
+            {
+                allPlayerStats[0].StartDeathCountdown();
+            }
+        }
+
+        /// <summary>
+        /// Bắt đầu countdown từ 5->0 và load scene về main scene sau khi countdown xong
+        /// </summary>
+        private void StartDeathCountdown()
+        {
+            StartCoroutine(DeathCountdownCoroutine());
+        }
+
+        private System.Collections.IEnumerator DeathCountdownCoroutine()
+        {
+            // Hiển thị countdown UI
+            UIEvents.countDownStarted?.Invoke();
+
+            int countdown = 5;
+
+            while (countdown > 0)
+            {
+                // Hiển thị số đếm ngược
+                UIEvents.countDownUpdated?.Invoke(countdown.ToString());
+
+                yield return new WaitForSeconds(1f);
+                countdown--;
+            }
+
+            // Hiển thị 0 trước khi kết thúc
+            UIEvents.countDownUpdated?.Invoke("0");
+            yield return new WaitForSeconds(1f);
+
+            // Ẩn countdown UI
+            UIEvents.countDownFinished?.Invoke();
+
+            // Chỉ Owner mới gửi ServerRpc để yêu cầu Host load scene
+            // Các clients khác sẽ đợi Host load scene và tự động sync
+            if (NetworkManager.Singleton.IsHost)
+            {
+                NetworkManager.Singleton.Shutdown();
+
+                // Hiện tại lúc này con trỏ chuột đang bị hide do cơ chế hide cursor trong PlayerMovement.cs
+                // Giúp tôi reset để khi về main scene thì con trỏ chuột được hiển thị
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+
+                UnityEngine.SceneManagement.SceneManager.LoadScene(
+                "scene_main",
+                UnityEngine.SceneManagement.LoadSceneMode.Single
+                );
+            }
         }
         /// <summary>
         /// Basically find everything the script needs to work
