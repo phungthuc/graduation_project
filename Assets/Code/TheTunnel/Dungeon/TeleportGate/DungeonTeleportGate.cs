@@ -2,6 +2,7 @@ using TheTunnel.Core;
 using TheTunnel.Manager;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Unity.Netcode;
 
 namespace TheTunnel.Goap
 {
@@ -11,7 +12,10 @@ namespace TheTunnel.Goap
         {
             if (other.gameObject.tag == GameConstant.PLAYER_TAG)
             {
-                TransitionScene.Instance.PlayTransitionScene(GameConstant.SCENE_DEFENSE_NAME, () => GameManager.Instance.StartCountDown());
+                NetworkManager.Singleton.SceneManager.LoadScene(
+                    GameConstant.SCENE_MAIN_NAME,
+                    UnityEngine.SceneManagement.LoadSceneMode.Single
+                );
                 this.enabled = false;
             }
         }

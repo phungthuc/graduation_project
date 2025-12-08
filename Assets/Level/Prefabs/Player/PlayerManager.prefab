@@ -4551,8 +4551,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 4289236479
-  m_fontColor: {r: 1, g: 0.5518868, b: 0.6596561, a: 1}
+    rgba: 4282122495
+  m_fontColor: {r: 1, g: 0, b: 0.23684216, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -9828,7 +9828,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Press "R" to restart.
+  m_text: Press "R" to back to the lobby.
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -9837,8 +9837,8 @@ MonoBehaviour:
   m_fontMaterials: []
   m_fontColor32:
     serializedVersion: 2
-    rgba: 3230305023
-  m_fontColor: {r: 1, g: 0.5424528, b: 0.5424528, a: 0.7529412}
+    rgba: 3221225727
+  m_fontColor: {r: 1, g: 0, b: 0, a: 0.7529412}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
