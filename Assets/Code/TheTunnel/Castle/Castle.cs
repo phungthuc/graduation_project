@@ -1,12 +1,13 @@
 using System;
 using cowsins;
 using TheTunnel.Core;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace TheTunnel.Target
 {
-    public class Castle : MonoBehaviour
+    public class Castle : NetworkBehaviour
     {
         [SerializeField]
         private int maxHealth = 5;
@@ -16,7 +17,13 @@ namespace TheTunnel.Target
         private PlayerStats _playerStats;
 
         public static Castle Instance;
-        private int _health;
+
+        // NetworkVariable để đồng bộ health cho tất cả clients
+        private readonly NetworkVariable<int> _networkHealth = new(
+            default,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server
+        );
 
         private void Awake()
         {
@@ -30,34 +37,125 @@ namespace TheTunnel.Target
             }
         }
 
-        private void Start()
+        public override void OnNetworkSpawn()
         {
-            _health = maxHealth;
-            healthSlider.maxValue = maxHealth;
-            healthSlider.value = _health;
-            GameObject player = GameObject.FindWithTag(GameConstant.PLAYER_TAG);
-            if (player == null)
+            base.OnNetworkSpawn();
+
+            // Subscribe to network health changes
+            _networkHealth.OnValueChanged += OnHealthChanged;
+
+            // Initialize health trên server
+            if (IsServer)
             {
-                Debug.Log("Player not found");
-                return;
+                _networkHealth.Value = maxHealth;
             }
-            _playerStats = player.GetComponent<PlayerStats>();
+
+            // Initialize UI
+            if (healthSlider != null)
+            {
+                healthSlider.maxValue = maxHealth;
+                healthSlider.value = _networkHealth.Value;
+            }
+
+            // Tìm player stats (có thể có nhiều players trong multiplayer)
+            FindPlayerStats();
         }
 
+        public override void OnNetworkDespawn()
+        {
+            _networkHealth.OnValueChanged -= OnHealthChanged;
+            base.OnNetworkDespawn();
+        }
+
+        private void FindPlayerStats()
+        {
+            // Tìm tất cả players và lấy PlayerStats của player đầu tiên
+            GameObject[] players = GameObject.FindGameObjectsWithTag(GameConstant.PLAYER_TAG);
+            if (players != null && players.Length > 0)
+            {
+                foreach (var player in players)
+                {
+                    var playerStats = player.GetComponent<PlayerStats>();
+                    if (playerStats != null)
+                    {
+                        _playerStats = playerStats;
+                        break;
+                    }
+                }
+            }
+
+            if (_playerStats == null)
+            {
+                Debug.LogWarning("[Castle] PlayerStats not found");
+            }
+        }
+
+        /// <summary>
+        /// Callback khi network health thay đổi (đồng bộ từ server)
+        /// </summary>
+        private void OnHealthChanged(int previousValue, int newValue)
+        {
+            UpdateHealthUI(newValue);
+
+            // Nếu health <= 0, trigger death
+            if (newValue <= 0 && previousValue > 0)
+            {
+                TriggerDeathClientRpc();
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật UI health slider
+        /// </summary>
+        private void UpdateHealthUI(int health)
+        {
+            if (healthSlider != null)
+            {
+                healthSlider.value = health;
+            }
+        }
+
+        /// <summary>
+        /// Nhận damage từ enemy (chỉ server mới xử lý)
+        /// </summary>
         public void TakeDamage(float damage)
         {
-            _health -= (int)damage;
-            healthSlider.value = _health;
-            if (_health <= 0)
+            // Chỉ server mới xử lý damage
+            if (!IsServer)
+            {
+                return;
+            }
+
+            int newHealth = _networkHealth.Value - (int)damage;
+            newHealth = Mathf.Max(0, newHealth); // Đảm bảo không âm
+
+            _networkHealth.Value = newHealth;
+        }
+
+        /// <summary>
+        /// ClientRpc để trigger death trên tất cả clients
+        /// </summary>
+        [ClientRpc]
+        private void TriggerDeathClientRpc()
+        {
+            // Tìm lại player stats nếu chưa có (có thể player spawn sau)
+            if (_playerStats == null)
+            {
+                FindPlayerStats();
+            }
+
+            // Gọi Die() trên tất cả players
+            if (_playerStats != null)
             {
                 _playerStats.Die();
-                Die();
             }
+
+            Die();
         }
 
         private void Die()
         {
-
+            // Logic khi castle chết
         }
     }
 }

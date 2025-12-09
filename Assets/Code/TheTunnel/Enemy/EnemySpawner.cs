@@ -119,10 +119,17 @@ namespace TheTunnel.Enemy
 
             foreach (var pool in _enemyPoolDict.Values)
             {
+                if (pool == null) continue;
+
                 List<EnemyBase> enemies = pool.GetActiveObjects();
+                if (enemies == null) continue;
+
                 foreach (var enemy in enemies)
                 {
-                    enemy.SetPaused(true);
+                    if (enemy != null)
+                    {
+                        enemy.SetPaused(true);
+                    }
                 }
             }
         }

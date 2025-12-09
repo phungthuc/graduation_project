@@ -286,16 +286,14 @@ namespace cowsins
             {
                 NetworkManager.Singleton.Shutdown();
 
-                // Hiện tại lúc này con trỏ chuột đang bị hide do cơ chế hide cursor trong PlayerMovement.cs
-                // Giúp tôi reset để khi về main scene thì con trỏ chuột được hiển thị
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-
                 UnityEngine.SceneManagement.SceneManager.LoadScene(
                 "scene_main",
                 UnityEngine.SceneManagement.LoadSceneMode.Single
                 );
             }
+
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
         }
         /// <summary>
         /// Basically find everything the script needs to work

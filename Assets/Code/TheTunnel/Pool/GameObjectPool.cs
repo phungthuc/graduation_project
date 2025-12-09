@@ -68,8 +68,30 @@ namespace TheTunnel.Pool
         public List<T> GetActiveObjects()
         {
             List<T> activeObjects = new List<T>();
-            foreach (Transform child in _holderTransform)
+
+            // Check null cho _holderTransform để tránh lỗi khi scene chuyển
+            if (_holderTransform == null)
             {
+                return activeObjects;
+            }
+
+            // Iterate qua children với null check
+            for (int i = _holderTransform.childCount - 1; i >= 0; i--)
+            {
+                Transform child = _holderTransform.GetChild(i);
+
+                // Check null cho child Transform (có thể bị destroy khi scene chuyển)
+                if (child == null)
+                {
+                    continue;
+                }
+
+                // Check null cho GameObject
+                if (child.gameObject == null)
+                {
+                    continue;
+                }
+
                 if (child.gameObject.activeSelf)
                 {
                     var obj = child.GetComponent<T>();

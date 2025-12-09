@@ -111,7 +111,15 @@ namespace TheTunnel.Enemy
 
             if (hitGo.CompareTag(GameConstant.CASTLE_TAG))
             {
-                Castle.Instance.TakeDamage(damage);
+                // Chỉ server mới xử lý damage cho Castle
+                if (Castle.Instance != null)
+                {
+                    Castle.Instance.TakeDamage(damage);
+                }
+                else
+                {
+                    Debug.LogWarning("[MeleeEnemyAttack] Castle.Instance is null");
+                }
             }
         }
     }

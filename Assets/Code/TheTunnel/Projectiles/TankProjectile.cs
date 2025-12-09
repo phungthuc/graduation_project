@@ -1,6 +1,7 @@
 using cowsins;
 using TheTunnel.Core;
 using TheTunnel.Target;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace TheTunnel.Projectile
@@ -18,16 +19,33 @@ namespace TheTunnel.Projectile
 
         private void OnTriggerEnter(Collider other)
         {
+            // Chỉ server mới xử lý damage
+            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer)
+            {
+                return;
+            }
+
             if (other.CompareTag(GameConstant.PLAYER_TAG))
             {
                 PlayerStats player = other.GetComponent<PlayerStats>();
-                player.Damage(damage, false);
+                if (player != null)
+                {
+                    player.Damage(damage, false);
+                }
                 Destroy(gameObject);
             }
-            
+
             if (other.CompareTag(GameConstant.CASTLE_TAG))
             {
-                Castle.Instance.TakeDamage(damage);
+                // Chỉ server mới gọi TakeDamage cho Castle
+                if (Castle.Instance != null)
+                {
+                    Castle.Instance.TakeDamage(damage);
+                }
+                else
+                {
+                    Debug.LogWarning("[TankProjectile] Castle.Instance is null");
+                }
                 Destroy(gameObject);
             }
         }
