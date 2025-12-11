@@ -81,6 +81,9 @@ namespace TheTunnel.Enemy
 
         private void OnHit(GameObject hitGo)
         {
+            Debug.Log("OnHit: " + hitGo.name);
+            Debug.Log("enemyBase: " + enemyBase.name);
+            Debug.Log("enemyBase.IsServer: " + enemyBase.IsServer);
             if (enemyBase == null || !enemyBase.IsServer) return; // Chỉ server xử lý damage
 
             ApplyDamageToGameObject(hitGo);

@@ -155,6 +155,8 @@ namespace TheTunnel.Level
                 return;
             }
 
+            Debug.Log("LoadDungeonLevel: " + levelData.DungeonData);
+
             _dungeonEnemyManager.LoadDungeonData(levelData.DungeonData);
             // GameObject dungeon = Resources.Load<GameObject>($"Dungeons/{levelData.DungeonId}");
             // if (dungeon == null)

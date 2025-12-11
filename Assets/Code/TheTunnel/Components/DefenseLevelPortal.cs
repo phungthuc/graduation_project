@@ -33,10 +33,10 @@ namespace TheTunnel.Components
             Debug.Log("All players have been despawned.");
         }
 
-        private void OnCollisionEnter(Collision collision)
+        private void OnTriggerEnter(Collider other)
         {
-            if (!IsOwner) { return; }
-            if (collision.gameObject.tag == GameConstant.PLAYER_TAG)
+            Debug.Log("OnTriggerEnter: " + other.gameObject.tag);
+            if (other.gameObject.tag == GameConstant.PLAYER_TAG)
             {
                 // UIController.instance.crosshair.SetVisibility(false);
                 // TransitionScene.Instance.PlayTransitionScene(GameConstant.SCENE_DUNGEON_NAME, () => LevelManager.Instance.LoadDungeonLevel(PlayerData.Instance.CurrentLevel));
@@ -48,7 +48,6 @@ namespace TheTunnel.Components
                 {
                     // DespawnAllPlayers();
                 }
-
                 NetworkManager.Singleton.SceneManager.LoadScene(
                     GameConstant.SCENE_DUNGEON_NAME,
                     UnityEngine.SceneManagement.LoadSceneMode.Single

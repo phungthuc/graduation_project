@@ -30,6 +30,7 @@ namespace TheTunnel.Player
 
         private void OnSceneEvent(SceneEvent sceneEvent)
         {
+
             if (!IsServer) return;
 
             if (gameManager == null)
@@ -103,7 +104,12 @@ namespace TheTunnel.Player
                 }
             }
 
-            Debug.Log("All players processed successfully.");
+            Debug.Log("All players processed successfully." + gameManager);
+
+            if (gameManager == null)
+            {
+                gameManager = FindFirstObjectByType<GameManager>();
+            }
 
             // Gọi gameManager logic sau khi spawn xong
             if (gameManager != null)

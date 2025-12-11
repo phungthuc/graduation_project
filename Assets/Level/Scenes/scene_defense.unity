@@ -879,6 +879,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1802874852}
     m_Modifications:
+    - target: {fileID: 4605965041144136402, guid: 4ca56f682e02c4b4882377ec82299c37, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 5206842047480317874, guid: 4ca56f682e02c4b4882377ec82299c37, type: 3}
       propertyPath: m_LocalPosition.x
       value: 120.8
@@ -931,16 +935,53 @@ PrefabInstance:
       propertyPath: m_Name
       value: Castle_Lowpoly
       objectReference: {fileID: 0}
+    - target: {fileID: 9048117528794978059, guid: 4ca56f682e02c4b4882377ec82299c37, type: 3}
+      propertyPath: m_TagString
+      value: Castle
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 9048117528794978059, guid: 4ca56f682e02c4b4882377ec82299c37, type: 3}
+      insertIndex: 1
+      addedObject: {fileID: 301296103}
   m_SourcePrefab: {fileID: 100100000, guid: 4ca56f682e02c4b4882377ec82299c37, type: 3}
 --- !u!4 &301296101 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5206842047480317874, guid: 4ca56f682e02c4b4882377ec82299c37, type: 3}
   m_PrefabInstance: {fileID: 301296100}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &301296102 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 9048117528794978059, guid: 4ca56f682e02c4b4882377ec82299c37, type: 3}
+  m_PrefabInstance: {fileID: 301296100}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &301296103
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 301296102}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  GlobalObjectIdHash: 582922778
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 0
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
 --- !u!1 &302854206
 GameObject:
   m_ObjectHideFlags: 0
@@ -3495,6 +3536,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1587025219}
+  - component: {fileID: 1587025221}
   - component: {fileID: 1587025220}
   m_Layer: 0
   m_Name: DefenseEnemyTracker
@@ -3533,7 +3575,32 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   _enemyManager: {fileID: 1374813982}
   _portalGO: {fileID: 2072361207}
-  _portalEffectGO: {fileID: 0}
+  _portalEffectGO: {fileID: 4163801357585236902}
+--- !u!114 &1587025221
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1587025218}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  GlobalObjectIdHash: 283576144
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 0
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
 --- !u!1 &1599102161
 GameObject:
   m_ObjectHideFlags: 0
@@ -5259,7 +5326,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1366814489470041789, guid: 4d66fbc3744fa9f44a327cf8df5b30fe, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2979867647133337139, guid: 4d66fbc3744fa9f44a327cf8df5b30fe, type: 3}
       propertyPath: m_LocalScale.x
@@ -5350,6 +5417,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 4d66fbc3744fa9f44a327cf8df5b30fe, type: 3}
+--- !u!1 &4163801357585236902 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7828880610269079489, guid: 4d66fbc3744fa9f44a327cf8df5b30fe, type: 3}
+  m_PrefabInstance: {fileID: 4163801357585236901}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1001 &6086415046940572953
 PrefabInstance:
   m_ObjectHideFlags: 0

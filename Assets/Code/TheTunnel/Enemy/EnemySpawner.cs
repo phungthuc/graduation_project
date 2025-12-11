@@ -40,8 +40,9 @@ namespace TheTunnel.Enemy
 
         public void Spawn(string enemyId, Vector3 position)
         {
-            // Chỉ server mới spawn Enemy
-            if (!Unity.Netcode.NetworkManager.Singleton.IsServer)
+            if (NetworkManager.Singleton != null &&
+                NetworkManager.Singleton.IsListening &&
+                !NetworkManager.Singleton.IsServer)
             {
                 return;
             }
@@ -51,7 +52,12 @@ namespace TheTunnel.Enemy
 
         private void SpawnEnemyInternal(string enemyId, Vector3 position)
         {
-            if (!Unity.Netcode.NetworkManager.Singleton.IsServer) return;
+            if (NetworkManager.Singleton != null &&
+                NetworkManager.Singleton.IsListening &&
+                !NetworkManager.Singleton.IsServer)
+            {
+                return;
+            }
 
             if (_enemyPoolDict.TryGetValue(enemyId, out var pool))
             {

@@ -120,6 +120,7 @@ namespace TheTunnel.Target
         /// </summary>
         public void TakeDamage(float damage)
         {
+            Debug.Log("TakeDamage: " + damage);
             // Chỉ server mới xử lý damage
             if (!IsServer)
             {

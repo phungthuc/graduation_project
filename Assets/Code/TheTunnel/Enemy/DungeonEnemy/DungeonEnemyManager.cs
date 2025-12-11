@@ -4,6 +4,7 @@ using TheTunnel.Enemy;
 using TheTunnel.Level;
 using UnityEngine;
 using UnityEngine.Events;
+using Unity.Netcode;
 
 namespace TheTunnel
 {
@@ -53,12 +54,20 @@ namespace TheTunnel
         /// </summary>
         public void LoadDungeonData(DungeonData dungeonData)
         {
+
+            Debug.Log("LoadDungeonData: " + NetworkManager.Singleton.IsServer);
+            Debug.Log("NetworkManager.Singleton.IsListening: " + NetworkManager.Singleton.IsListening);
+            Debug.Log("NetworkManager.Singleton.IsClient: " + NetworkManager.Singleton.IsClient);
+            Debug.Log("NetworkManager.Singleton.IsServer: " + NetworkManager.Singleton.IsServer);
+            Debug.Log("NetworkManager.Singleton.IsHost: " + NetworkManager.Singleton.IsHost);
             // Chỉ server mới load và spawn enemies (tương tự EnemyManager)
-            if (Unity.Netcode.NetworkManager.Singleton != null &&
-                !Unity.Netcode.NetworkManager.Singleton.IsServer)
+            if (NetworkManager.Singleton != null &&
+                NetworkManager.Singleton.IsListening &&
+                !NetworkManager.Singleton.IsServer)
             {
                 return;
             }
+
 
             currentDungeonData = dungeonData;
             _enemySpawnCount = 0;

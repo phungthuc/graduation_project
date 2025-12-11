@@ -70,7 +70,6 @@ namespace TheTunnel.UI
                 {
                     localPlayerCamera = weaponController.mainCamera;
                     cameraTransform = weaponController.mainCamera.transform;
-                    Debug.Log($"[HealthBarBillboard] Found camera via WeaponController for {gameObject.name}");
                     return;
                 }
 

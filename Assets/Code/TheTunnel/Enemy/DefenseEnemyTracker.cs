@@ -64,6 +64,7 @@ namespace TheTunnel.Enemy
 
         private void SetPortalVisibility(bool isActive)
         {
+            Debug.Log("SetPortalVisibility: " + isActive);
             if (_portalGO != null)
             {
                 _portalGO.SetActive(isActive);
