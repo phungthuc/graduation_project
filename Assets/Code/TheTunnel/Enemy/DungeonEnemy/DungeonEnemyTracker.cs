@@ -1,57 +1,81 @@
-using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.Events;
+using TheTunnel;
 
 namespace TheTunnel.Enemy.DungeonEnemy
 {
-    public class DungeonEnemyTracker : MonoBehaviour
+    public class DungeonEnemyTracker : NetworkBehaviour
     {
-        [SerializeField] private GameObject enemiesParent;
-        private List<EnemyHealth> _enemies = new List<EnemyHealth>();
-        private int _aliveCount;
-        public UnityEvent EnemyCleaned;
-        [SerializeField] private GameObject teleportGate;
-        public void Start()
+        [SerializeField] private DungeonEnemyManager _enemyManager;
+
+        [SerializeField] private GameObject _portalGO;
+
+        [SerializeField] private GameObject _portalEffectGO;
+
+        private readonly NetworkVariable<bool> _isPortalActive = new(false,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server);
+
+        public override void OnNetworkSpawn()
         {
-            _enemies = new List<EnemyHealth>(enemiesParent.GetComponentsInChildren<EnemyHealth>());
-            _aliveCount = _enemies.Count;
-            teleportGate.SetActive(false);
-            // Subscribe to health changes
-            foreach (var enemy in _enemies)
+            base.OnNetworkSpawn();
+            _isPortalActive.OnValueChanged += OnPortalActiveChanged;
+
+            // Server listens to enemy clear event; clients rely on network variable
+            if (IsServer && _enemyManager != null)
             {
-                enemy.events.OnDeath.AddListener(OnEnemyDeath);
+                _enemyManager.EnemyCleaned.RemoveListener(OnEnemyDungeonLevelCleaned);
+                _enemyManager.EnemyCleaned.AddListener(OnEnemyDungeonLevelCleaned);
             }
 
-            EnemyCleaned.AddListener(OnEnemyLevelCleaned);
+            SetPortalVisibility(_isPortalActive.Value);
         }
 
-        private void OnEnemyDeath()
+        public override void OnNetworkDespawn()
         {
-            UpdateAliveCount();
-        }
+            _isPortalActive.OnValueChanged -= OnPortalActiveChanged;
 
-        private void UpdateAliveCount()
-        {
-            _enemies.RemoveAll(e => e == null || e.health <= 0);
-            _aliveCount = _enemies.Count;
-
-            if (_aliveCount <= 0)
+            if (IsServer && _enemyManager != null)
             {
-                EnemyCleaned?.Invoke();
+                _enemyManager.EnemyCleaned.RemoveListener(OnEnemyDungeonLevelCleaned);
             }
+
+            base.OnNetworkDespawn();
         }
 
-        public int GetAliveEnemyCount()
+        private void OnEnemyDungeonLevelCleaned()
         {
-            return _aliveCount;
+            if (!IsServer) return;
+            ActivatePortal();
         }
 
-        private void OnEnemyLevelCleaned()
+        private void ActivatePortal()
         {
+            Debug.Log("OnEnemyDungeonLevelCleaned");
             PlayerData.Instance.SetDungeonLevelCompleted(PlayerData.Instance.CurrentLevel);
             PlayerData.Instance.CurrentLevel++;
-            teleportGate.SetActive(true);
-            //teleport player to the main scene and clear all players
+            if (_isPortalActive.Value) return;
+            _isPortalActive.Value = true;
+            SetPortalVisibility(true);
+        }
+
+        private void OnPortalActiveChanged(bool previousValue, bool newValue)
+        {
+            SetPortalVisibility(newValue);
+        }
+
+        private void SetPortalVisibility(bool isActive)
+        {
+            Debug.Log("SetPortalVisibility: " + isActive);
+            if (_portalGO != null)
+            {
+                _portalGO.SetActive(isActive);
+            }
+
+            if (_portalEffectGO != null)
+            {
+                _portalEffectGO.SetActive(isActive);
+            }
         }
     }
 }

@@ -5,28 +5,6 @@
       {
         "enemyData": [
           {
-            "enemyId": "melee",
-            "amount": 2
-          },
-          {
-            "enemyId": "sword",
-            "amount": 1
-          }
-        ],
-        "timeNextWave": 5
-      },
-      {
-        "enemyData": [
-          {
-            "enemyId": "longRange",
-            "amount": 2
-          }
-        ],
-        "timeNextWave": 7
-      },
-      {
-        "enemyData": [
-          {
             "enemyId": "boss_golem",
             "amount": 1
           }
@@ -38,15 +16,56 @@
     "dungeonData": {
       "playerPosition": "-8,-12,-280",
       "enemySpawnData": {
-        "longHall": {
-          "spawnPosition": "0,0,0",
-          "enemyData": [
-            {
-              "enemyId": "spider",
-              "amount": 10
-            }
-          ]
-        },
+        "longHall": [
+          {
+            "spawnPosition": "-18,-10,-180",
+            "enemyData": [
+              {
+                "enemyId": "melee",
+                "amount": 1
+              }
+            ]
+          },
+          {
+            "spawnPosition": "-8.58,-21.27,-97.9",
+            "enemyData": [
+              {
+                "enemyId": "spider",
+                "amount": 4
+              }
+            ]
+          },
+          {
+            "spawnPosition": "-10.04294,-25.73, -10.73234",
+            "enemyData": [
+              {
+                "enemyId": "ranged",
+                "amount": 2
+              },
+              {
+                "enemyId": "spider",
+                "amount": 2
+              }
+            ]
+          },
+          {
+          "spawnPosition": "-134.9715,-28.6,-36.86",
+            "enemyData": [
+              {
+                "enemyId": "spider",
+                "amount": 2
+              },
+              {
+                "enemyId": "ranged",
+                "amount": 2
+              },
+              {
+                "enemyId": "melee",
+                "amount": 2
+              }
+            ]
+          }
+        ],
         "bossArea": {
           "spawnPosition": "0,0,0",
           "enemyData": [

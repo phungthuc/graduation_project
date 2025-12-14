@@ -25,6 +25,8 @@ namespace TheTunnel
         private Dictionary<string, int> _zoneSpawnCount; // Track spawn count cho mỗi zone
         private Dictionary<string, int> _zoneDiedCount; // Track died count cho mỗi zone
 
+        [SerializeField] private GameObject winGameUI;
+
         private void Awake()
         {
             _enemySpawner = GetComponent<DungeonEnemySpawner>();
@@ -357,6 +359,10 @@ namespace TheTunnel
             {
                 Debug.Log($"Win condition not met yet. Enemies: {_enemyDiedCount}/{_enemySpawnCount}");
             }
+        }
+
+        private void OnWinGame()
+        {
         }
 
         private void SpawnPlayer()

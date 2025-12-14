@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using TheTunnel.Core;
+using UnityEngine.Events;
 
 namespace TheTunnel.Lobby
 {
@@ -19,6 +20,12 @@ namespace TheTunnel.Lobby
             [SerializeField] private TextMeshProUGUI readyText;
 
             bool isReady = false;
+
+            private void OnEnable()
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
 
             private void Start()
             {
