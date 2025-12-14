@@ -28,11 +28,45 @@ namespace TheTunnel.Enemy
 
         private void InitializePools()
         {
+            if (enemyDataList == null || enemyDataList.Count == 0)
+            {
+                Debug.LogWarning("DungeonEnemySpawner: enemyDataList is empty! Vui lòng thêm DungeonEnemyData vào Inspector.");
+                return;
+            }
+
             foreach (var enemyData in enemyDataList)
             {
+                if (enemyData == null)
+                {
+                    Debug.LogWarning("DungeonEnemySpawner: Found null enemyData in list. Skipping...");
+                    continue;
+                }
+
+                if (string.IsNullOrEmpty(enemyData.id))
+                {
+                    Debug.LogWarning($"DungeonEnemySpawner: Found enemyData with empty id. Skipping...");
+                    continue;
+                }
+
+                if (enemyData.enemyPrefab == null)
+                {
+                    Debug.LogWarning($"DungeonEnemySpawner: Found enemyData with id='{enemyData.id}' but enemyPrefab is null. Skipping...");
+                    continue;
+                }
+
+                // Kiểm tra duplicate ID
+                if (_enemyPoolDict.ContainsKey(enemyData.id))
+                {
+                    Debug.LogWarning($"DungeonEnemySpawner: Duplicate enemy ID '{enemyData.id}' found. Skipping duplicate...");
+                    continue;
+                }
+
                 var pool = new GameObjectPool<EnemyHealth>(enemyData.enemyPrefab, transform, 0);
                 _enemyPoolDict.Add(enemyData.id, pool);
+                Debug.Log($"DungeonEnemySpawner: Initialized pool for enemy ID: {enemyData.id}");
             }
+
+            Debug.Log($"DungeonEnemySpawner: Initialized {_enemyPoolDict.Count} enemy pools. Available IDs: {string.Join(", ", _enemyPoolDict.Keys)}");
         }
 
         public void Spawn(string enemyId, Vector3 position)
@@ -50,58 +84,66 @@ namespace TheTunnel.Enemy
         {
             if (!Unity.Netcode.NetworkManager.Singleton.IsServer) return;
 
-            if (_enemyPoolDict.TryGetValue(enemyId, out var pool))
+            // Kiểm tra enemyId có tồn tại trong pool không
+            if (!_enemyPoolDict.TryGetValue(enemyId, out var pool))
             {
-                var enemy = pool.GetObject();
-
-                // Kiểm tra EnemyBase component (cần thiết cho network health sync)
-                var enemyBase = enemy.GetComponent<EnemyBase>();
-                if (enemyBase == null)
-                {
-                    Debug.LogError($"Dungeon Enemy {enemyId} (GameObject: {enemy.gameObject.name}) không có EnemyBase component! Vui lòng thêm EnemyBase component vào prefab.");
-                    pool.ReturnObject(enemy);
-                    return;
-                }
-
-                // Sample NavMesh để đảm bảo position nằm trên NavMesh
-                Vector3 spawnPosition = SampleNavMeshPosition(position);
-                enemy.transform.position = spawnPosition;
-
-                // Lấy NetworkObject component (tương tự EnemySpawner)
-                NetworkObject networkObject = enemy.GetComponent<NetworkObject>();
-                if (networkObject == null)
-                {
-                    Debug.LogError($"Dungeon Enemy {enemyId} không có NetworkObject component!");
-                    pool.ReturnObject(enemy);
-                    return;
-                }
-
-                // Spawn enemy như NetworkObject (tương tự EnemySpawner)
-                if (!networkObject.IsSpawned)
-                {
-                    networkObject.Spawn();
-                }
-
-                // Update position for navmesh agent (sau khi spawn NetworkObject)
-                NavMeshAgent agent = enemy.GetComponent<NavMeshAgent>();
-                if (agent != null)
-                {
-                    // Đợi một frame để đảm bảo NetworkObject đã spawn xong
-                    StartCoroutine(SetupNavMeshAgent(agent, spawnPosition));
-                }
-
-                UnityAction onDiedAction = null;
-                onDiedAction = () =>
-                {
-                    enemy.events.OnDeath.RemoveListener(onDiedAction);
-                    DespawnEnemy(enemy, pool);
-                    EnemyDied?.Invoke();
-                    _enemySpawnCount--;
-                };
-                enemy.events.OnDeath.AddListener(onDiedAction);
-                _enemySpawnCount++;
-                EnemySpawned?.Invoke();
+                Debug.LogError($"Dungeon Enemy ID '{enemyId}' không tìm thấy trong enemyDataList! " +
+                    $"Vui lòng đảm bảo đã thêm DungeonEnemyData với id='{enemyId}' vào DungeonEnemySpawner. " +
+                    $"Available IDs: {string.Join(", ", _enemyPoolDict.Keys)}");
+                return;
             }
+
+            var enemy = pool.GetObject();
+
+            // Kiểm tra EnemyBase component (cần thiết cho network health sync)
+            var enemyBase = enemy.GetComponent<EnemyBase>();
+            if (enemyBase == null)
+            {
+                Debug.LogError($"Dungeon Enemy {enemyId} (GameObject: {enemy.gameObject.name}) không có EnemyBase component! Vui lòng thêm EnemyBase component vào prefab.");
+                pool.ReturnObject(enemy);
+                return;
+            }
+
+            // Sample NavMesh để đảm bảo position nằm trên NavMesh
+            Vector3 spawnPosition = SampleNavMeshPosition(position);
+            enemy.transform.position = spawnPosition;
+
+            // Lấy NetworkObject component (tương tự EnemySpawner)
+            NetworkObject networkObject = enemy.GetComponent<NetworkObject>();
+            if (networkObject == null)
+            {
+                Debug.LogError($"Dungeon Enemy {enemyId} không có NetworkObject component!");
+                pool.ReturnObject(enemy);
+                return;
+            }
+
+            // Spawn enemy như NetworkObject (tương tự EnemySpawner)
+            if (!networkObject.IsSpawned)
+            {
+                networkObject.Spawn();
+            }
+
+            // Update position for navmesh agent (sau khi spawn NetworkObject)
+            NavMeshAgent agent = enemy.GetComponent<NavMeshAgent>();
+            if (agent != null)
+            {
+                // Đợi một frame để đảm bảo NetworkObject đã spawn xong
+                StartCoroutine(SetupNavMeshAgent(agent, spawnPosition));
+            }
+
+            UnityAction onDiedAction = null;
+            onDiedAction = () =>
+            {
+                enemy.events.OnDeath.RemoveListener(onDiedAction);
+                DespawnEnemy(enemy, pool);
+                EnemyDied?.Invoke();
+                _enemySpawnCount--;
+            };
+            enemy.events.OnDeath.AddListener(onDiedAction);
+            _enemySpawnCount++;
+            EnemySpawned?.Invoke();
+
+            Debug.Log($"Successfully spawned dungeon enemy: {enemyId} at position: {spawnPosition}");
         }
 
         private void DespawnEnemy(EnemyHealth enemy, GameObjectPool<EnemyHealth> pool)

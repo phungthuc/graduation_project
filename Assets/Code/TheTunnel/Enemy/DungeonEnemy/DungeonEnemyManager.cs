@@ -109,6 +109,7 @@ namespace TheTunnel
 
         /// <summary>
         /// Spawn enemies cho một zone (tương tự SpawnWave trong EnemyManager)
+        /// Hỗ trợ nhiều spawn points cho mỗi zone
         /// </summary>
         public void SpawnDungeonWave(string zoneName)
         {
@@ -132,36 +133,75 @@ namespace TheTunnel
                 return;
             }
 
-            var spawnData = currentDungeonData.EnemySpawnData[zoneName];
+            var spawnPointsList = currentDungeonData.EnemySpawnData[zoneName];
 
-            // Parse spawn position từ JSON
-            Vector3 baseSpawnPosition = ParseStringToVector3(spawnData.SpawnPosition);
+            if (spawnPointsList == null || spawnPointsList.Count == 0)
+            {
+                Debug.LogWarning($"No spawn points found for zone: {zoneName}");
+                return;
+            }
 
-            Debug.Log($"Spawning enemies for zone: {zoneName} at position: {baseSpawnPosition}");
+            Debug.Log($"Spawning enemies for zone: {zoneName} with {spawnPointsList.Count} spawn point(s)");
 
             // Reset tracking cho zone này
             int zoneSpawnCount = 0;
             _zoneSpawnCount[zoneName] = 0;
             _zoneDiedCount[zoneName] = 0;
 
-            foreach (var enemyData in spawnData.EnemyData)
+            // Xử lý từng spawn point trong zone
+            foreach (var spawnPoint in spawnPointsList)
             {
-                // Spawn từng enemy với đúng ID và position (có delay như EnemyManager)
-                for (int i = 0; i < enemyData.Amount; i++)
-                {
-                    // Randomize position xung quanh base position
-                    Vector3 spawnPosition = GetSpawnPosition(baseSpawnPosition, enemyData.Amount, i);
+                // Parse spawn position từ JSON
+                Vector3 baseSpawnPosition = ParseStringToVector3(spawnPoint.SpawnPosition);
 
-                    // Spawn với delay ngẫu nhiên (tương tự EnemyManager)
-                    float delay = UnityEngine.Random.Range(0, 2f);
-                    StartCoroutine(SpawnEnemyWithDelay(enemyData.Id, spawnPosition, delay));
-                    zoneSpawnCount++;
+                if (baseSpawnPosition == Vector3.zero && spawnPoint.SpawnPosition != "0,0,0")
+                {
+                    Debug.LogWarning($"Failed to parse spawn position '{spawnPoint.SpawnPosition}' for zone: {zoneName}. Skipping this spawn point.");
+                    continue;
+                }
+
+                Debug.Log($"Processing spawn point at position: {baseSpawnPosition} for zone: {zoneName}");
+
+                // Spawn enemies cho spawn point này
+                if (spawnPoint.EnemyData == null || spawnPoint.EnemyData.Count == 0)
+                {
+                    Debug.LogWarning($"Spawn point at {baseSpawnPosition} for zone {zoneName} has no enemyData. Skipping...");
+                    continue;
+                }
+
+                foreach (var enemyData in spawnPoint.EnemyData)
+                {
+                    if (string.IsNullOrEmpty(enemyData.Id))
+                    {
+                        Debug.LogWarning($"Found enemyData with empty Id in zone {zoneName}. Skipping...");
+                        continue;
+                    }
+
+                    if (enemyData.Amount <= 0)
+                    {
+                        Debug.LogWarning($"Enemy ID '{enemyData.Id}' in zone {zoneName} has invalid amount: {enemyData.Amount}. Skipping...");
+                        continue;
+                    }
+
+                    Debug.Log($"Spawning {enemyData.Amount} enemy(ies) of type '{enemyData.Id}' at position {baseSpawnPosition} for zone: {zoneName}");
+
+                    // Spawn từng enemy với đúng ID và position (có delay như EnemyManager)
+                    for (int i = 0; i < enemyData.Amount; i++)
+                    {
+                        // Randomize position xung quanh base position
+                        Vector3 spawnPosition = GetSpawnPosition(baseSpawnPosition, enemyData.Amount, i);
+
+                        // Spawn với delay ngẫu nhiên (tương tự EnemyManager)
+                        float delay = UnityEngine.Random.Range(0, 2f);
+                        StartCoroutine(SpawnEnemyWithDelay(enemyData.Id, spawnPosition, delay));
+                        zoneSpawnCount++;
+                    }
                 }
             }
 
             _zoneSpawnCount[zoneName] = zoneSpawnCount;
             _enemySpawnCount += zoneSpawnCount;
-            Debug.Log($"Spawned {zoneSpawnCount} enemies for zone: {zoneName}. Total enemies: {_enemySpawnCount}");
+            Debug.Log($"Spawned {zoneSpawnCount} enemies for zone: {zoneName} across {spawnPointsList.Count} spawn point(s). Total enemies: {_enemySpawnCount}");
         }
 
         /// <summary>
@@ -299,22 +339,36 @@ namespace TheTunnel
 
         Vector3 ParseStringToVector3(string input)
         {
-            // Tách chuỗi bằng dấu phẩy
-            string[] values = input.Split(',');
+            if (string.IsNullOrEmpty(input))
+            {
+                Debug.LogError("ParseStringToVector3: Input string is null or empty!");
+                return Vector3.zero;
+            }
+
+            // Loại bỏ spaces và tách chuỗi bằng dấu phẩy
+            string cleanedInput = input.Replace(" ", ""); // Loại bỏ spaces (ví dụ: "-4, 12,-70" -> "-4,12,-70")
+            string[] values = cleanedInput.Split(',');
 
             // Đảm bảo chuỗi có đủ 3 phần tử
             if (values.Length != 3)
             {
-                Debug.LogError("Invalid input format for Vector3!");
+                Debug.LogError($"ParseStringToVector3: Invalid input format '{input}'! Expected format: 'x,y,z' or 'x, y, z'. Got {values.Length} values.");
                 return Vector3.zero;
             }
 
             // Chuyển đổi từng phần tử thành float và tạo Vector3
-            return new Vector3(
-                float.Parse(values[0]),
-                float.Parse(values[1]),
-                float.Parse(values[2])
-            );
+            try
+            {
+                float x = float.Parse(values[0].Trim());
+                float y = float.Parse(values[1].Trim());
+                float z = float.Parse(values[2].Trim());
+                return new Vector3(x, y, z);
+            }
+            catch (System.FormatException e)
+            {
+                Debug.LogError($"ParseStringToVector3: Failed to parse '{input}' to Vector3. Error: {e.Message}");
+                return Vector3.zero;
+            }
         }
     }
 }

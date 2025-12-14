@@ -4,6 +4,7 @@ using TheTunnel.Core;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Collections;
 
 namespace TheTunnel.Target
 {
@@ -87,7 +88,15 @@ namespace TheTunnel.Target
             if (_playerStats == null)
             {
                 Debug.LogWarning("[Castle] PlayerStats not found");
+                //Delay to find player stats
+                StartCoroutine(DelayToFindPlayerStats());
             }
+        }
+
+        private IEnumerator DelayToFindPlayerStats()
+        {
+            yield return new WaitForSeconds(1f);
+            FindPlayerStats();
         }
 
         /// <summary>

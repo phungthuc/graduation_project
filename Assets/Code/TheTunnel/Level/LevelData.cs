@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace TheTunnel.Level
 {
@@ -43,7 +44,8 @@ namespace TheTunnel.Level
         public string PlayerPosition { get; set; }
 
         [JsonProperty("enemySpawnData")]
-        public Dictionary<string, SpawnAreaData> EnemySpawnData { get; set; } = new();
+        [JsonConverter(typeof(SpawnAreaDataConverter))]
+        public Dictionary<string, List<SpawnAreaData>> EnemySpawnData { get; set; } = new();
     }
 
     public class SpawnAreaData
@@ -53,5 +55,84 @@ namespace TheTunnel.Level
 
         [JsonProperty("enemyData")]
         public List<EnemyPerWaveData> EnemyData { get; set; } = new();
+    }
+
+    /// <summary>
+    /// Custom JsonConverter để parse cả array và object thành List<SpawnAreaData>
+    /// Hỗ trợ format:
+    /// - "areaName": [{...}, {...}] (array)
+    /// - "areaName": {...} (object đơn lẻ)
+    /// </summary>
+    public class SpawnAreaDataConverter : JsonConverter<Dictionary<string, List<SpawnAreaData>>>
+    {
+        public override Dictionary<string, List<SpawnAreaData>> ReadJson(JsonReader reader, Type objectType, Dictionary<string, List<SpawnAreaData>> existingValue, bool hasExistingValue, JsonSerializer serializer)
+        {
+            var result = new Dictionary<string, List<SpawnAreaData>>();
+            JObject obj = JObject.Load(reader);
+
+            foreach (var property in obj.Properties())
+            {
+                string areaName = property.Name;
+                JToken value = property.Value;
+
+                List<SpawnAreaData> spawnPoints = new List<SpawnAreaData>();
+
+                // Kiểm tra nếu là array
+                if (value.Type == JTokenType.Array)
+                {
+                    // Parse array các spawn points
+                    foreach (var item in value)
+                    {
+                        SpawnAreaData spawnData = item.ToObject<SpawnAreaData>(serializer);
+                        if (spawnData != null)
+                        {
+                            spawnPoints.Add(spawnData);
+                        }
+                    }
+                }
+                // Kiểm tra nếu là object đơn lẻ
+                else if (value.Type == JTokenType.Object)
+                {
+                    // Parse object đơn lẻ thành một spawn point
+                    SpawnAreaData spawnData = value.ToObject<SpawnAreaData>(serializer);
+                    if (spawnData != null)
+                    {
+                        spawnPoints.Add(spawnData);
+                    }
+                }
+
+                result[areaName] = spawnPoints;
+            }
+
+            return result;
+        }
+
+        public override void WriteJson(JsonWriter writer, Dictionary<string, List<SpawnAreaData>> value, JsonSerializer serializer)
+        {
+            writer.WriteStartObject();
+
+            foreach (var kvp in value)
+            {
+                writer.WritePropertyName(kvp.Key);
+
+                // Nếu chỉ có 1 spawn point, write như object
+                // Nếu có nhiều spawn points, write như array
+                if (kvp.Value.Count == 1)
+                {
+                    serializer.Serialize(writer, kvp.Value[0]);
+                }
+                else
+                {
+                    writer.WriteStartArray();
+                    foreach (var spawnData in kvp.Value)
+                    {
+                        serializer.Serialize(writer, spawnData);
+                    }
+                    writer.WriteEndArray();
+                }
+            }
+
+            writer.WriteEndObject();
+        }
     }
 }
