@@ -149,6 +149,13 @@ namespace TheTunnel.Enemy
         private void DespawnEnemy(EnemyHealth enemy, GameObjectPool<EnemyHealth> pool)
         {
             if (!Unity.Netcode.NetworkManager.Singleton.IsServer) return;
+            if (enemy == null) return;
+
+            // Remove all listeners để tránh memory leak
+            if (enemy.events != null)
+            {
+                enemy.events.OnDeath.RemoveAllListeners();
+            }
 
             // Despawn NetworkObject trước khi return về pool (tương tự EnemySpawner)
             NetworkObject networkObject = enemy.GetComponent<NetworkObject>();
@@ -156,6 +163,14 @@ namespace TheTunnel.Enemy
             {
                 networkObject.Despawn();
             }
+
+            // Disable NavMeshAgent trước khi return về pool
+            NavMeshAgent agent = enemy.GetComponent<NavMeshAgent>();
+            if (agent != null)
+            {
+                agent.enabled = false;
+            }
+
             pool.ReturnObject(enemy);
         }
 
@@ -168,6 +183,8 @@ namespace TheTunnel.Enemy
                 List<EnemyHealth> enemies = pool.GetActiveObjects();
                 foreach (var enemy in enemies)
                 {
+                    if (enemy == null) continue;
+
                     // Có thể thêm logic pause enemy nếu cần
                     var enemyBase = enemy.GetComponent<EnemyBase>();
                     if (enemyBase != null)
@@ -176,6 +193,49 @@ namespace TheTunnel.Enemy
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Cleanup tất cả enemies - despawn và return về pool
+        /// </summary>
+        public void CleanupAllEnemies()
+        {
+            // Chỉ cleanup nếu có NetworkManager và là server
+            if (Unity.Netcode.NetworkManager.Singleton == null || !Unity.Netcode.NetworkManager.Singleton.IsServer)
+            {
+                return;
+            }
+
+            Debug.Log("DungeonEnemySpawner: Cleaning up all enemies...");
+
+            int cleanedCount = 0;
+            foreach (var kvp in _enemyPoolDict)
+            {
+                string enemyId = kvp.Key;
+                var pool = kvp.Value;
+
+                if (pool == null) continue;
+
+                List<EnemyHealth> enemies = pool.GetActiveObjects();
+
+                foreach (var enemy in enemies)
+                {
+                    if (enemy == null) continue;
+
+                    // Remove death listener trước khi despawn
+                    if (enemy.events != null)
+                    {
+                        enemy.events.OnDeath.RemoveAllListeners();
+                    }
+
+                    // Despawn và return về pool
+                    DespawnEnemy(enemy, pool);
+                    cleanedCount++;
+                }
+            }
+
+            _enemySpawnCount = 0;
+            Debug.Log($"DungeonEnemySpawner: Cleaned up {cleanedCount} enemies.");
         }
 
         /// <summary>

@@ -41,6 +41,9 @@ namespace TheTunnel
 
         private void OnDestroy()
         {
+            // Cleanup tất cả enemies trước khi destroy
+            CleanupAllEnemies();
+
             // Unsubscribe để tránh memory leak
             if (_enemySpawner != null)
             {
@@ -68,6 +71,8 @@ namespace TheTunnel
                 return;
             }
 
+            // Cleanup tất cả enemies từ session trước (nếu có)
+            CleanupAllEnemies();
 
             currentDungeonData = dungeonData;
             _enemySpawnCount = 0;
@@ -105,6 +110,30 @@ namespace TheTunnel
             _isPaused = true;
             // Có thể thêm logic stop enemies nếu cần
             Debug.Log("Dungeon enemy spawning stopped");
+        }
+
+        /// <summary>
+        /// Cleanup tất cả enemies từ session trước để tránh lỗi khi load dungeon mới
+        /// </summary>
+        private void CleanupAllEnemies()
+        {
+            if (_enemySpawner == null) return;
+
+            Debug.Log("Cleaning up all enemies from previous session...");
+
+            // Stop tất cả enemies
+            _enemySpawner.StopAllEnemies();
+
+            // Despawn tất cả enemies trong pools
+            _enemySpawner.CleanupAllEnemies();
+
+            // Reset counters
+            _enemySpawnCount = 0;
+            _enemyDiedCount = 0;
+            _zoneSpawnCount?.Clear();
+            _zoneDiedCount?.Clear();
+
+            Debug.Log("Cleanup completed.");
         }
 
         /// <summary>

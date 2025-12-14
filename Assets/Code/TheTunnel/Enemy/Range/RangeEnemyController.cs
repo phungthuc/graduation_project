@@ -21,6 +21,12 @@ namespace TheTunnel.Enemy
         {
             if (!IsServer) return; // Chỉ server điều khiển logic
 
+            // Kiểm tra null references để tránh lỗi khi enemy đã bị despawn nhưng GameObject vẫn còn
+            if (!attack || !movement || !health)
+            {
+                return;
+            }
+
             if (isPaused.Value)
             {
                 return;
@@ -38,7 +44,10 @@ namespace TheTunnel.Enemy
         public override void SetPaused(bool paused)
         {
             base.SetPaused(paused);
-            movement.SetMoving(!paused);
+            if (movement != null)
+            {
+                movement.SetMoving(!paused);
+            }
         }
 
         public override void OnReset()
@@ -58,6 +67,7 @@ namespace TheTunnel.Enemy
 
         private void HandleAttack()
         {
+            if (!movement || !attack) return;
             movement.SetMoving(false);
             attack.Attack();
         }
