@@ -43,8 +43,8 @@
             "spawnPosition": "-18,-10,-180",
             "enemyData": [
               {
-                "enemyId": "melee",
-                "amount": 1
+                "enemyId": "ranged",
+                "amount": 2
               }
             ]
           },
@@ -53,7 +53,7 @@
             "enemyData": [
               {
                 "enemyId": "spider",
-                "amount": 4
+                "amount": 2
               }
             ]
           },
@@ -61,11 +61,11 @@
             "spawnPosition": "-10.04294,-25.73, -10.73234",
             "enemyData": [
               {
-                "enemyId": "ranged",
+                "enemyId": "spider",
                 "amount": 2
               },
               {
-                "enemyId": "spider",
+                "enemyId": "melee",
                 "amount": 2
               }
             ]
@@ -75,7 +75,7 @@
             "enemyData": [
               {
                 "enemyId": "spider",
-                "amount": 2
+                "amount": 1
               },
               {
                 "enemyId": "ranged",
