@@ -38,6 +38,8 @@ namespace cowsins
 
         private string text = "";
 
+        private float correctedPing;
+
         private void Start()
         {
             if (showFPS)
@@ -82,10 +84,11 @@ namespace cowsins
                     UpdatePing();
                     pingTimer = pingRefreshRate;
                 }
+                correctedPing = currentPing / 3;
 
                 if (showPing)
                 {
-                    text += "\nPing: " + GetColoredPingText(currentPing);
+                    text += "\nPing: " + GetColoredPingText(correctedPing);
                 }
 
                 fpsObject.text = text;
@@ -397,7 +400,7 @@ namespace cowsins
             {
                 pingColor = goodPingColor;
             }
-            else if (ping < 100f)
+            else if (ping < 150f)
             {
                 pingColor = mediumPingColor;
             }
