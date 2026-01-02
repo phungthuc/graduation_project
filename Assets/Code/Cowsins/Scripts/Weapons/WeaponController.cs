@@ -61,7 +61,7 @@ namespace cowsins
 
         private bool reloading;
         public bool Reloading { get { return reloading; } set { reloading = value; } }
-        private bool reloadSoundPlayed = false; // Flag để tránh duplicate reload sound
+        private bool reloadSoundPlayed = false;
 
         [Tooltip("If true you won´t have to press the reload button when you run out of bullets")] public bool autoReload;
 
@@ -132,7 +132,7 @@ namespace cowsins
             private set { if (IsServer) networkCurrentWeapon.Value = value; }
         }
 
-        // Network Variables để đồng bộ ammo của weapon hiện tại
+        // Network Variables for syncing current weapon ammo
         private NetworkVariable<int> networkBulletsLeftInMagazine = new NetworkVariable<int>(
             0,
             NetworkVariableReadPermission.Everyone,
@@ -192,10 +192,6 @@ namespace cowsins
         {
             base.OnNetworkSpawn();
 
-            // Debug log để kiểm tra
-            Debug.Log($"[WeaponController] OnNetworkSpawn - IsOwner: {IsOwner}, OwnerClientId: {OwnerClientId}, LocalClientId: {NetworkManager.Singleton.LocalClientId}");
-
-            // Subscribe to ammo changes để update UI
             if (!_isSubscribedToAmmo)
             {
                 networkBulletsLeftInMagazine.OnValueChanged += OnBulletsLeftInMagazineChanged;
@@ -204,19 +200,14 @@ namespace cowsins
                 _isSubscribedToAmmo = true;
             }
 
-            // Disable camera rendering cho remote players
-            // QUAN TRỌNG: Disable TẤT CẢ cameras để tránh hiển thị kép khi owner zoom
             if (!IsOwner)
             {
                 if (mainCamera != null)
                 {
-                    // Disable camera hoàn toàn để tránh hiển thị kép
-                    mainCamera.cullingMask = 0; // Không render gì cả
-                    mainCamera.enabled = false; // Disable camera hoàn toàn
-                    Debug.Log("[WeaponController] Disabled mainCamera for remote player");
+                    mainCamera.cullingMask = 0;
+                    mainCamera.enabled = false;
                 }
 
-                // Tìm và disable tất cả cameras khác (WeaponCamera, v.v.)
                 Camera[] allCameras = GetComponentsInChildren<Camera>(true);
                 foreach (Camera cam in allCameras)
                 {
@@ -224,44 +215,31 @@ namespace cowsins
                     {
                         cam.cullingMask = 0;
                         cam.enabled = false;
-                        Debug.Log($"[WeaponController] Disabled camera: {cam.gameObject.name} for remote player");
                     }
                 }
             }
             else if (IsOwner && mainCamera != null)
             {
-                // Đảm bảo camera của owner hoạt động bình thường
                 mainCamera.enabled = true;
 
-                // Main Camera render tất cả TRỪ layer "Weapons" (cánh tay, vũ khí)
-                // Vì cánh tay và vũ khí nằm trong WeaponCamera hierarchy và sẽ được WeaponCamera render
                 int weaponsLayer = LayerMask.NameToLayer("Weapons");
                 if (weaponsLayer != -1)
                 {
-                    // Main Camera không render layer Weapons để tránh duplicate
                     mainCamera.cullingMask = ~(1 << weaponsLayer);
-                    Debug.Log($"[WeaponController] Main Camera configured: excluding Weapons layer ({weaponsLayer}) to avoid duplicate rendering");
                 }
                 else
                 {
-                    // Nếu không có layer Weapons, render tất cả (giữ nguyên behavior cũ)
                     mainCamera.cullingMask = -1;
-                    Debug.LogWarning("[WeaponController] Weapons layer not found. Main Camera will render all layers (may cause duplicate visuals).");
                 }
 
-                Debug.Log($"[WeaponController] Owner camera enabled: {mainCamera.enabled}, cullingMask: {mainCamera.cullingMask}, depth: {mainCamera.depth}");
-
-                // Cấu hình WeaponCamera để CHỈ render cánh tay, vũ khí và effects (KHÔNG render scene)
-                // Tìm WeaponCamera trong Main Camera
                 Transform weaponCameraTransform = mainCamera.transform.Find("WeaponCamera");
                 if (weaponCameraTransform != null)
                 {
                     Camera weaponCam = weaponCameraTransform.GetComponent<Camera>();
                     if (weaponCam != null)
                     {
-                        // WeaponCamera CHỈ render layer "Weapons" (cánh tay, vũ khí) và layer "Effects" (bullet impacts)
-                        // KHÔNG render scene để tránh duplicate
-                        // Reuse weaponsLayer variable already declared above
+                        // WeaponCamera only renders "Weapons" and "Effects" layers
+                        // Does not render scene to avoid duplicates
                         int effectsLayer = LayerMask.NameToLayer("Effects");
 
                         int cullingMask = 0;
@@ -277,37 +255,29 @@ namespace cowsins
                         if (cullingMask != 0)
                         {
                             weaponCam.cullingMask = cullingMask;
-                            Debug.Log($"[WeaponController] WeaponCamera configured: only rendering Weapons layer ({weaponsLayer}) and Effects layer ({effectsLayer})");
                         }
                         else
                         {
-                            // Nếu không tìm thấy layer, chỉ render Weapons layer (nếu có)
                             if (weaponsLayer != -1)
                             {
                                 weaponCam.cullingMask = (1 << weaponsLayer);
                             }
                             else
                             {
-                                // Fallback: disable WeaponCamera nếu không tìm thấy layer nào
                                 weaponCam.enabled = false;
-                                Debug.LogWarning("[WeaponController] Could not find Weapons or Effects layer. WeaponCamera disabled to avoid duplicate scene rendering.");
                                 return;
                             }
                         }
-
-                        // Đảm bảo WeaponCamera có depth cao hơn Main Camera để render trên cùng
                         if (weaponCam.depth <= mainCamera.depth)
                         {
                             weaponCam.depth = mainCamera.depth + 1;
                         }
                         weaponCam.enabled = true;
-                        Debug.Log($"[WeaponController] Configured WeaponCamera: cullingMask={weaponCam.cullingMask}, depth={weaponCam.depth}, enabled={weaponCam.enabled}");
                     }
                 }
             }
             else if (IsOwner && mainCamera == null)
             {
-                Debug.LogError("[WeaponController] Owner player but mainCamera is null!");
             }
         }
 
@@ -325,16 +295,13 @@ namespace cowsins
             }
         }
 
-        // Callbacks khi ammo thay đổi trên network
         private void OnBulletsLeftInMagazineChanged(int previousValue, int newValue)
         {
-            // Update local ammo từ network
             if (id != null)
             {
                 id.bulletsLeftInMagazine = newValue;
             }
 
-            // Update UI nếu là owner
             if (IsOwner)
             {
                 HandleUI();
@@ -343,23 +310,19 @@ namespace cowsins
 
         private void OnTotalBulletsChanged(int previousValue, int newValue)
         {
-            // Update local ammo từ network
             if (id != null)
             {
                 id.totalBullets = newValue;
             }
 
-            // Update UI nếu là owner
             if (IsOwner)
             {
                 HandleUI();
             }
         }
 
-        // Callback khi current weapon thay đổi
         private void OnCurrentWeaponChanged(int previousValue, int newValue)
         {
-            // Khi weapon thay đổi, update ammo từ network variable
             if (inventory != null && newValue >= 0 && newValue < inventory.Length && inventory[newValue] != null)
             {
                 id = inventory[newValue];
@@ -371,7 +334,6 @@ namespace cowsins
             }
         }
 
-        // Method để sync ammo lên network (chỉ server mới gọi)
         private void SyncAmmoToNetwork()
         {
             if (!IsServer || id == null) return;
@@ -391,7 +353,6 @@ namespace cowsins
         {
             if (!IsOwner)
             {
-                // Đảm bảo camera của remote player luôn bị disable (kể cả khi owner zoom)
                 EnsureRemoteCamerasDisabled();
                 return;
             }
@@ -404,12 +365,8 @@ namespace cowsins
         }
 
         /// <summary>
-        /// Đảm bảo tất cả cameras của remote player luôn bị disable
-        /// Bao gồm Main Camera và WeaponCamera
-        /// </summary>
         private void EnsureRemoteCamerasDisabled()
         {
-            // Disable mainCamera
             if (mainCamera != null)
             {
                 if (mainCamera.enabled)
@@ -419,12 +376,9 @@ namespace cowsins
                 }
             }
 
-            // Tìm và disable tất cả cameras trong toàn bộ player object (bao gồm WeaponCamera)
-            // Sử dụng GetComponentsInChildren với includeInactive = true để tìm cả cameras bị inactive
             Camera[] allCameras = GetComponentsInChildren<Camera>(true);
             foreach (Camera cam in allCameras)
             {
-                // Disable tất cả cameras (Main Camera, WeaponCamera, v.v.)
                 if (cam != null && cam.enabled)
                 {
                     cam.enabled = false;
@@ -432,7 +386,6 @@ namespace cowsins
                 }
             }
 
-            // Đặc biệt tìm WeaponCamera theo tên để đảm bảo disable
             if (mainCamera != null)
             {
                 Transform weaponCameraTransform = mainCamera.transform.Find("WeaponCamera");
@@ -525,7 +478,7 @@ namespace cowsins
             if (!IsOwner) return;
             if (mainCamera == null) return;
 
-            // Truyền camera position và forward direction từ client lên server
+            // Pass camera position and forward direction from client to server
             Vector3 cameraPosition = mainCamera.transform.position;
             Vector3 cameraForward = mainCamera.transform.forward;
             Vector3 cameraRight = mainCamera.transform.right;
@@ -552,7 +505,7 @@ namespace cowsins
             StartCoroutine(HandleShooting());
 
             // Adding a layer of realism, bullet shells get instantiated and interact with the world
-            // Spawn bullet shells via ClientRpc - chỉ cho owner
+            // Spawn bullet shells via ClientRpc - only for owner
             if (weapon.showBulletShells && (int)weapon.shootStyle != 2)
             {
                 SpawnBulletShellsClientRpc(cameraPos, cameraRight, cameraUp);
@@ -576,7 +529,6 @@ namespace cowsins
         private void SpawnBulletShellsClientRpc(Vector3 cameraPos, Vector3 cameraRight, Vector3 cameraUp)
         {
             if (firePoint == null) return;
-            // Tính toán camera forward từ right và up
             Vector3 cameraForward = Vector3.Cross(cameraRight, cameraUp);
             foreach (var p in firePoint)
             {
@@ -691,7 +643,6 @@ namespace cowsins
                 }
             }
 
-            Debug.LogError("Appropriate weapon scriptable object not found in the custom shot array (under the events tab). Please, configure the weapon scriptable object and the suitable method to fix this error");
         }
         private IEnumerator HandleShooting()
         {
@@ -732,13 +683,13 @@ namespace cowsins
         [ClientRpc]
         private void ShootEffectsClientRpc()
         {
-            // Chỉ hiển thị effects nếu có camera và weapon
-            // VÀ chỉ hiển thị cho owner của weapon này (người đang bắn)
-            if (!IsOwner) return; // CHỈ owner mới thấy effects của chính họ
+            // Only show effects if camera and weapon exist
+            // And only show for owner of this weapon
+            if (!IsOwner) return;
 
             if (mainCamera == null || weapon == null || inventory == null || currentWeapon < 0 || currentWeapon >= inventory.Length || inventory[currentWeapon] == null) return;
 
-            // Visual and audio effects chỉ cho owner
+            // Visual and audio effects only for owner
             if (CamShake.instance != null)
                 CamShake.instance.ShootShake(camShakeAmount * aimingCamShakeMultiplier * crouchingCamShakeMultiplier);
             if (weapon.useProceduralShot && ProceduralShot.Instance != null)
@@ -773,7 +724,7 @@ namespace cowsins
         /// </summary>
         private void HitscanShot()
         {
-            // Sử dụng camera data đã được lưu từ client
+            // Use camera data stored from client
             if (storedCameraPosition == Vector3.zero || storedCameraForward == Vector3.zero) return;
 
             // UI updates should only happen on owner client
@@ -786,13 +737,11 @@ namespace cowsins
 
             Transform hitObj;
 
-            // Luôn tính toán spread direction từ camera data đã lưu (từ client)
-            // Tính toán spread tương tự như GetSpreadDirection nhưng không cần camera object
+            // Always calculate spread direction from stored camera data (from client)
             float horSpread = Random.Range(-spread, spread);
             float verSpread = Random.Range(-spread, spread);
 
-            // Tính toán spread direction trong local space của camera
-            // Sử dụng camera right và up vectors đã lưu
+            // Calculate spread direction in camera local space
             Vector3 spreadOffset = storedCameraRight * horSpread + storedCameraUp * verSpread;
             Vector3 dir = (storedCameraForward + spreadOffset).normalized;
 
@@ -1045,18 +994,15 @@ namespace cowsins
         [ServerRpc]
         private void StartReloadServerRpc()
         {
-            // Tránh gọi reload nhiều lần trên server
+            // Avoid calling reload multiple times on server
             if (reloading) return;
 
-            // Set reloading flag ngay lập tức để tránh duplicate calls
             reloading = true;
-            reloadSoundPlayed = false; // Reset flag cho lần reload mới
+            reloadSoundPlayed = false;
 
-            // Start reload coroutine trên server
             StartCoroutine(reload());
 
-            // Gửi reload effects đến owner (chỉ gửi đến owner, không gửi đến Server)
-            // Sử dụng ClientRpc với TargetClientIds để chỉ gửi đến owner
+            // Send reload effects to owner only
             bool isEmptyMag = id != null && id.bulletsLeftInMagazine == 0;
             ulong ownerClientId = OwnerClientId;
             StartReloadClientRpc(isEmptyMag, new ClientRpcParams
@@ -1071,19 +1017,18 @@ namespace cowsins
         [ClientRpc]
         private void StartReloadClientRpc(bool isEmptyMag, ClientRpcParams rpcParams = default)
         {
-            // Chỉ owner mới nhận được RPC này (đã filter ở ServerRpc)
-            // Set reloading flag trên Client để tránh gọi reload nhiều lần
+            // Only owner receives this RPC (filtered in ServerRpc)
             reloading = true;
-            reloadSoundPlayed = false; // Reset flag trước khi play để đảm bảo mỗi lần reload đều play sound
+            reloadSoundPlayed = false;
 
             if (weapon != null && inventory != null && currentWeapon >= 0 && currentWeapon < inventory.Length && inventory[currentWeapon] != null)
             {
-                // Play reload sound (chỉ play một lần cho mỗi lần reload)
+                // Play reload sound (only once per reload)
                 AudioClip reloadSound = isEmptyMag ? weapon.audioSFX.emptyMagReload : weapon.audioSFX.reload;
                 if (reloadSound != null)
                 {
                     SoundManager.Instance.PlaySound(reloadSound, .1f, 0, true, 0);
-                    reloadSoundPlayed = true; // Đánh dấu đã play sound
+                    reloadSoundPlayed = true;
                 }
 
                 // Play reload animation
@@ -1098,7 +1043,7 @@ namespace cowsins
         [ClientRpc]
         private void FinishReloadClientRpc(ClientRpcParams rpcParams = default)
         {
-            // Reset reloading flag trên Client khi reload hoàn thành
+            // Reset reloading flag on Client when reload completes
             reloading = false;
             reloadSoundPlayed = false;
         }
@@ -1108,11 +1053,7 @@ namespace cowsins
         /// </summary>
         private IEnumerator DefaultReload()
         {
-            // reloading flag đã được set trong StartReloadServerRpc() trước khi coroutine này chạy
             yield return new WaitForSeconds(.001f);
-
-            // Sound và animation đã được play qua ClientRpc, không cần play lại trên Server
-            // Chỉ cần set reloading state
 
             // Wait reloadTime seconds, assigned in the weapon scriptable object.
             yield return new WaitForSeconds(reloadTime);
@@ -1172,7 +1113,6 @@ namespace cowsins
                 }
             }
 
-            // Sync ammo lên network sau khi reload
             SyncAmmoToNetwork();
         }
 
@@ -1219,7 +1159,6 @@ namespace cowsins
                     id.bulletsLeftInMagazine = 0;
                 }
 
-                // Sync ammo lên network
                 SyncAmmoToNetwork();
             }
         }
@@ -1293,7 +1232,7 @@ namespace cowsins
 
             firePoint = inventory[currentWeapon].FirePoint;
 
-            // Sync ammo lên network khi equip weapon
+            // Sync ammo to network when equipping weapon
             SyncAmmoToNetwork();
 
             // UI & OTHERS
@@ -1471,10 +1410,10 @@ namespace cowsins
                 return;
             }
 
-            // Đảm bảo ammo được sync từ network nếu có
+            // Ensure ammo is synced from network if available
             if (id != null)
             {
-                // Nếu ammo local khác với network, update từ network (cho client)
+                // If local ammo differs from network, update from network (for client)
                 if (!IsServer && networkBulletsLeftInMagazine.Value != id.bulletsLeftInMagazine)
                 {
                     id.bulletsLeftInMagazine = networkBulletsLeftInMagazine.Value;
@@ -1669,7 +1608,7 @@ namespace cowsins
                 ? newWeapon.magazineSize * newWeapon.totalMagazines
                 : newWeapon.magazineSize);
 
-            // Sync ammo lên network nếu đây là weapon hiện tại
+            // Sync ammo to network if this is current weapon
             if (inventoryIndex == currentWeapon && IsServer)
             {
                 id = inventory[inventoryIndex];
@@ -1842,7 +1781,7 @@ namespace cowsins
             inventory = new WeaponIdentification[inventorySize];
             currentWeapon = 0;
             canShoot = true;
-            // Chỉ set FOV nếu camera tồn tại (không cần check enabled vì có thể chưa được enable lúc này)
+            // Only set FOV if camera exists
             if (mainCamera != null)
             {
                 PlayerMovement pm = GetComponent<PlayerMovement>();

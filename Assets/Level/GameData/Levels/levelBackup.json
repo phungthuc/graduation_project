@@ -5,6 +5,28 @@
       {
         "enemyData": [
           {
+            "enemyId": "melee",
+            "amount": 2
+          },
+          {
+            "enemyId": "sword",
+            "amount": 1
+          }
+        ],
+        "timeNextWave": 5
+      },
+      {
+        "enemyData": [
+          {
+            "enemyId": "longRange",
+            "amount": 2
+          }
+        ],
+        "timeNextWave": 7
+      },
+      {
+        "enemyData": [
+          {
             "enemyId": "boss_golem",
             "amount": 1
           }
@@ -21,8 +43,8 @@
             "spawnPosition": "-18,-10,-180",
             "enemyData": [
               {
-                "enemyId": "melee",
-                "amount": 1
+                "enemyId": "ranged",
+                "amount": 2
               }
             ]
           },
@@ -31,7 +53,7 @@
             "enemyData": [
               {
                 "enemyId": "spider",
-                "amount": 4
+                "amount": 2
               }
             ]
           },
@@ -39,11 +61,11 @@
             "spawnPosition": "-10.04294,-25.73, -10.73234",
             "enemyData": [
               {
-                "enemyId": "ranged",
+                "enemyId": "spider",
                 "amount": 2
               },
               {
-                "enemyId": "spider",
+                "enemyId": "melee",
                 "amount": 2
               }
             ]
@@ -53,7 +75,7 @@
             "enemyData": [
               {
                 "enemyId": "spider",
-                "amount": 2
+                "amount": 1
               },
               {
                 "enemyId": "ranged",
@@ -65,16 +87,7 @@
               }
             ]
           }
-        ],
-        "bossArea": {
-          "spawnPosition": "0,0,0",
-          "enemyData": [
-            {
-              "enemyId": "boss",
-              "amount": 1
-            }
-          ]
-        }
+        ]
       }
     }
   },

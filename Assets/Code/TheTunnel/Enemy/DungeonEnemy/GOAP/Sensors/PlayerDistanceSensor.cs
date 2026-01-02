@@ -16,18 +16,15 @@ namespace TheTunnel.GOAP
 
         public override SenseValue Sense(IMonoAgent agent, IComponentReference references)
         {
-            // CHỈ chạy trên server
             if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer)
             {
                 return new SenseValue(int.MaxValue);
             }
 
-            // Tìm player gần nhất trong multiplayer
             _playerTransform = FindNearestPlayer(agent.transform.position);
 
             if (_playerTransform == null)
             {
-                // Nếu không tìm thấy player, trả về distance rất lớn
                 return new SenseValue(int.MaxValue);
             }
 
@@ -41,13 +38,11 @@ namespace TheTunnel.GOAP
             Transform nearestPlayer = null;
             float nearestDistance = float.MaxValue;
 
-            // CHỈ tìm players trên server
             if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsServer)
             {
                 return null;
             }
 
-            // Tìm tất cả players trong multiplayer
             foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
             {
                 if (client.PlayerObject != null && client.PlayerObject.IsSpawned)

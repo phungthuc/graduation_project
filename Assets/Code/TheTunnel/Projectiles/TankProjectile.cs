@@ -37,14 +37,9 @@ namespace TheTunnel.Projectile
 
             if (other.CompareTag(GameConstant.CASTLE_TAG))
             {
-                // Chỉ server mới gọi TakeDamage cho Castle
                 if (Castle.Instance != null)
                 {
                     Castle.Instance.TakeDamage(damage);
-                }
-                else
-                {
-                    Debug.LogWarning("[TankProjectile] Castle.Instance is null");
                 }
                 Destroy(gameObject);
             }

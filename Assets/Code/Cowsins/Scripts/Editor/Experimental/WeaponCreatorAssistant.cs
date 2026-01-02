@@ -343,7 +343,6 @@ namespace cowsins
             AnimatorState startInspectState = FindStateByName(states, "StartInspection");
             AnimatorState loopInspectState = FindStateByName(states, "InspectLoop");
             AnimatorState endInspectState = FindStateByName(states, "StopInspection");
-            Debug.Log(idleState);
             if (idleState != null && idleClip != null) idleState.motion = idleClip;
             if (shootState != null && shootClip != null) shootState.motion = shootClip;
             if (reloadState != null && reloadClip != null) reloadState.motion = reloadClip;

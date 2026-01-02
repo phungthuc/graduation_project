@@ -24,10 +24,6 @@ namespace TheTunnel.Enemy
         {
             base.Start();
             _enemyStateManager = GetComponent<EnemyStateManager>();
-            if (_enemyStateManager == null)
-            {
-                Debug.LogError("EnemyStateManager is missing");
-            }
             punchWeapon.Hit += OnHit;
             SetEnableAttack(false);
         }
@@ -61,18 +57,15 @@ namespace TheTunnel.Enemy
 
         public override void Attack()
         {
-            if (enemyBase == null || !enemyBase.IsServer) return; // Chỉ server thực hiện attack logic
+            if (enemyBase == null || !enemyBase.IsServer) return;
 
-            // Play sound và animation trên tất cả clients
             PlayAttackEffects();
         }
 
         private void PlayAttackEffects()
         {
-            // Play sound và animation trên tất cả clients
             GameSoundManager.Instance.PlaySound(swingSound, 0, true, 1f, transform.position);
 
-            // Sử dụng SetAnimatorTrigger để sync animation qua network
             if (_enemyStateManager != null)
             {
                 _enemyStateManager.SetAnimatorTrigger(AttackTriggerParam);
@@ -81,10 +74,7 @@ namespace TheTunnel.Enemy
 
         private void OnHit(GameObject hitGo)
         {
-            Debug.Log("OnHit: " + hitGo.name);
-            Debug.Log("enemyBase: " + enemyBase.name);
-            Debug.Log("enemyBase.IsServer: " + enemyBase.IsServer);
-            if (enemyBase == null || !enemyBase.IsServer) return; // Chỉ server xử lý damage
+            if (enemyBase == null || !enemyBase.IsServer) return;
 
             ApplyDamageToGameObject(hitGo);
         }
@@ -99,11 +89,9 @@ namespace TheTunnel.Enemy
         {
             if (hitGo.CompareTag(GameConstant.PLAYER_TAG))
             {
-                // Tìm NetworkObject của player để gửi damage
                 NetworkObject playerNetworkObject = hitGo.GetComponent<NetworkObject>();
                 if (playerNetworkObject != null)
                 {
-                    // Gửi damage qua RPC đến player
                     PlayerStats playerStats = hitGo.GetComponent<PlayerStats>();
                     if (playerStats != null)
                     {
@@ -114,14 +102,9 @@ namespace TheTunnel.Enemy
 
             if (hitGo.CompareTag(GameConstant.CASTLE_TAG))
             {
-                // Chỉ server mới xử lý damage cho Castle
                 if (Castle.Instance != null)
                 {
                     Castle.Instance.TakeDamage(damage);
-                }
-                else
-                {
-                    Debug.LogWarning("[MeleeEnemyAttack] Castle.Instance is null");
                 }
             }
         }

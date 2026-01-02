@@ -98,7 +98,6 @@ namespace TheTunnel.Level
             LevelData levelData = GameConfig.Instance.LevelDataList[levelIndex];
             if (levelData == null)
             {
-                Debug.LogError("Failed to load level data");
                 return;
             }
             _enemyManager.LoadWaveData(levelData.WaveList);
@@ -116,7 +115,6 @@ namespace TheTunnel.Level
             _enemyManager = FindAnyObjectByType<EnemyManager>();
             if (_enemyManager == null)
             {
-                Debug.LogError("EnemyManager component not found");
                 return;
             }
         }
@@ -126,7 +124,6 @@ namespace TheTunnel.Level
             _playerStats = FindAnyObjectByType<PlayerStats>();
             if (_playerStats == null)
             {
-                Debug.LogError("PlayerStats component not found");
                 return;
             }
             _playerStats.events.OnDeath.RemoveListener(OnPlayerDied);
@@ -151,11 +148,8 @@ namespace TheTunnel.Level
             LevelData levelData = GameConfig.Instance.LevelDataList[levelIndex];
             if (levelData == null)
             {
-                Debug.LogError("Failed to load level data");
                 return;
             }
-
-            Debug.Log("LoadDungeonLevel: " + levelData.DungeonData);
 
             _dungeonEnemyManager.LoadDungeonData(levelData.DungeonData);
             // GameObject dungeon = Resources.Load<GameObject>($"Dungeons/{levelData.DungeonId}");
@@ -173,7 +167,6 @@ namespace TheTunnel.Level
             _dungeonEnemyManager = FindAnyObjectByType<DungeonEnemyManager>();
             if (_dungeonEnemyManager == null)
             {
-                Debug.LogError("DungeonEnemyManager component not found");
                 return;
             }
         }

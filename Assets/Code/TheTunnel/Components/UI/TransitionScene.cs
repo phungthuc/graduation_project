@@ -60,15 +60,12 @@ namespace TheTunnel
         #region Private Methods
         private IEnumerator LoadSceneAsync()
         {
-            // Check if NetworkManager exists and is active
             if (IsNetworkActive())
             {
-                Debug.Log("Loading scene network");
                 yield return StartCoroutine(LoadSceneNetwork());
             }
             else
             {
-                Debug.Log("Loading scene local");
                 yield return StartCoroutine(LoadSceneLocal());
             }
         }
@@ -116,7 +113,6 @@ namespace TheTunnel
 
                 if (elapsed >= timeout)
                 {
-                    Debug.LogWarning($"[TransitionScene] Timeout waiting for network scene load: {_targetSceneName}");
                 }
             }
 

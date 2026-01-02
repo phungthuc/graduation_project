@@ -12,10 +12,6 @@ namespace TheTunnel.Multiplayer
             {
                 NetworkManager.Singleton.OnClientStopped += OnClientStoppedHandler;
             }
-            else
-            {
-                Debug.LogError("NetworkManager.Singleton is null!");
-            }
         }
 
         private void OnClientStoppedHandler(bool obj)

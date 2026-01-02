@@ -7,11 +7,9 @@ public class Test : MonoBehaviour
     {
         NetworkManager.Singleton.OnClientConnectedCallback += (id) =>
         {
-            Debug.Log("Client connected to server: " + id);
         };
         NetworkManager.Singleton.OnClientDisconnectCallback += (id) =>
         {
-            Debug.Log("Client disconnected from server: " + id);
         };
     }
 }

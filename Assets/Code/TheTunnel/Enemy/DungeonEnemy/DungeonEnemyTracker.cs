@@ -51,7 +51,6 @@ namespace TheTunnel.Enemy.DungeonEnemy
 
         private void ActivatePortal()
         {
-            Debug.Log("OnEnemyDungeonLevelCleaned");
             PlayerData.Instance.SetDungeonLevelCompleted(PlayerData.Instance.CurrentLevel);
             PlayerData.Instance.CurrentLevel++;
             if (_isPortalActive.Value) return;
@@ -66,7 +65,6 @@ namespace TheTunnel.Enemy.DungeonEnemy
 
         private void SetPortalVisibility(bool isActive)
         {
-            Debug.Log("SetPortalVisibility: " + isActive);
             if (_portalGO != null)
             {
                 _portalGO.SetActive(isActive);

@@ -55,8 +55,6 @@ namespace TheTunnel.Lobby
         {
             ulong clientId = rpcParams.Receive.SenderClientId;
             _readyStates[clientId] = ready;
-
-            Debug.Log($"Client {clientId} ready = {ready}");
         }
 
         public bool AllReady()

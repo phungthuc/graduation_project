@@ -64,11 +64,9 @@ namespace TheTunnel.Enemy
                 var enemy = pool.GetObject();
                 enemy.transform.position = position;
 
-                // Lấy NetworkObject component
                 NetworkObject networkObject = enemy.GetComponent<NetworkObject>();
                 if (networkObject == null)
                 {
-                    Debug.LogError($"Enemy {enemyId} không có NetworkObject component!");
                     pool.ReturnObject(enemy);
                     return;
                 }

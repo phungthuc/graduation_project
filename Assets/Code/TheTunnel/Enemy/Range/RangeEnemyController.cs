@@ -19,9 +19,8 @@ namespace TheTunnel.Enemy
 
         private void FixedUpdate()
         {
-            if (!IsServer) return; // Chỉ server điều khiển logic
+            if (!IsServer) return;
 
-            // Kiểm tra null references để tránh lỗi khi enemy đã bị despawn nhưng GameObject vẫn còn
             if (!attack || !movement || !health)
             {
                 return;

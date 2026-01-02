@@ -69,8 +69,6 @@ namespace cowsins
 
         private float desiredX;
 
-        // Network variables để sync rotation của Camera theo mọi trục (x, y, z)
-        // Vì tất cả player visuals (súng, cánh tay) nằm trong Camera, nên cần sync Camera rotation
         private NetworkVariable<float> networkDesiredX = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         private NetworkVariable<float> networkXRotation = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
         private NetworkVariable<float> networkCameraTilt = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
@@ -599,20 +597,15 @@ namespace cowsins
             else
             {
 
-                // Disable camera rendering cho remote players (không disable hoàn toàn)
-                // QUAN TRỌNG: Disable TẤT CẢ cameras (Main Camera và WeaponCamera) để tránh hiển thị kép khi zoom
                 if (playerCam != null)
                 {
-                    // Tìm tất cả cameras trong playerCam và disable rendering
                     Camera[] allCameras = playerCam.GetComponentsInChildren<Camera>(true);
                     foreach (Camera cam in allCameras)
                     {
-                        // Disable rendering cho tất cả cameras (Main Camera, WeaponCamera, v.v.)
-                        cam.cullingMask = 0; // Không render gì cả
-                        cam.enabled = false; // Disable camera hoàn toàn để tránh hiển thị kép
+                        cam.cullingMask = 0;
+                        cam.enabled = false;
                     }
 
-                    // Đặc biệt tìm và disable WeaponCamera theo đường dẫn: Camera/CameraPivot/CameraContainer/Main Camera/WeaponCamera
                     Transform cameraPivot = playerCam.Find("CameraPivot");
                     if (cameraPivot != null)
                     {
@@ -659,7 +652,6 @@ namespace cowsins
         }
 
         /// <summary>
-        /// Callback khi networkDesiredX thay đổi - áp dụng Camera rotation (yaw) cho remote players
         /// </summary>
         private void OnDesiredXChanged(float previousValue, float newValue)
         {
@@ -670,7 +662,6 @@ namespace cowsins
         }
 
         /// <summary>
-        /// Callback khi networkXRotation thay đổi - áp dụng Camera rotation (pitch) cho remote players
         /// </summary>
         private void OnXRotationChanged(float previousValue, float newValue)
         {
@@ -681,7 +672,6 @@ namespace cowsins
         }
 
         /// <summary>
-        /// Callback khi networkCameraTilt thay đổi - áp dụng Camera rotation (roll) cho remote players
         /// </summary>
         private void OnCameraTiltChanged(float previousValue, float newValue)
         {
@@ -692,13 +682,11 @@ namespace cowsins
         }
 
         /// <summary>
-        /// Áp dụng rotation đầy đủ (x, y, z) cho remote players từ network variables
         /// </summary>
         private void ApplyRemoteCameraRotation()
         {
             if (!IsOwner && playerCam != null)
             {
-                // Sync rotation của Camera theo mọi trục (pitch, yaw, roll)
                 playerCam.transform.localRotation = Quaternion.Euler(networkXRotation.Value, networkDesiredX.Value, networkCameraTilt.Value);
             }
         }
@@ -747,7 +735,6 @@ namespace cowsins
         {
             if (!IsOwner)
             {
-                // Đảm bảo tất cả cameras của remote player luôn bị disable (kể cả khi owner zoom)
                 EnsureRemoteCamerasDisabled();
                 return;
             }
@@ -760,14 +747,11 @@ namespace cowsins
         }
 
         /// <summary>
-        /// Đảm bảo tất cả cameras của remote player luôn bị disable
-        /// Bao gồm Main Camera và WeaponCamera
         /// </summary>
         private void EnsureRemoteCamerasDisabled()
         {
             if (playerCam == null) return;
 
-            // Tìm và disable tất cả cameras trong playerCam
             Camera[] allCameras = playerCam.GetComponentsInChildren<Camera>(true);
             foreach (Camera cam in allCameras)
             {
@@ -778,7 +762,6 @@ namespace cowsins
                 }
             }
 
-            // Đặc biệt tìm và disable WeaponCamera theo đường dẫn
             Transform cameraPivot = playerCam.Find("CameraPivot");
             if (cameraPivot != null)
             {

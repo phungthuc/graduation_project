@@ -10,11 +10,9 @@ namespace TheTunnel.Components
     {
         private void OnTriggerEnter(Collider other)
         {
-            Debug.Log("OnTriggerEnter: " + other.gameObject.tag);
             if (other.gameObject.tag == GameConstant.PLAYER_TAG)
             {
                 this.enabled = false;
-                Debug.Log("Loading Main scene...");
 
                 PlayerData.Instance.ResetData();
 

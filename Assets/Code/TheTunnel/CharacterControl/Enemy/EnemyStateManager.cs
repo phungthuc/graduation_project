@@ -22,20 +22,9 @@ namespace TheTunnel.CharacterControl
         {
             base.Start();
             _meleeEnemyAttack = GetComponent<MeleeEnemyAttack>();
-            if (_meleeEnemyAttack == null)
-            {
-                Debug.LogError("MeleeEnemyAttack is missing");
-            }
 
-            // Tìm NetworkAnimator hoặc NetworkAnimatorHelper
             _networkAnimator = GetComponent<NetworkAnimator>();
             _networkAnimatorHelper = GetComponent<NetworkAnimatorHelper>();
-
-            // Nếu không có NetworkAnimator, thêm warning
-            if (_networkAnimator == null && _networkAnimatorHelper == null)
-            {
-                Debug.LogWarning("EnemyStateManager: Không tìm thấy NetworkAnimator hoặc NetworkAnimatorHelper. Animation sẽ không được sync qua network!");
-            }
 
             IdleState = new EnemyIdleState();
             AttackState = new EnemyAttackState();
@@ -80,7 +69,6 @@ namespace TheTunnel.CharacterControl
             }
             else if (animator != null)
             {
-                // Fallback: set trực tiếp (NetworkAnimator sẽ tự sync nếu có)
                 animator.SetTrigger(hash);
             }
         }

@@ -83,7 +83,6 @@ namespace cowsins.Inspector
                 tagsProp.InsertArrayElementAtIndex(tagsProp.arraySize);
                 SerializedProperty newTagProp = tagsProp.GetArrayElementAtIndex(tagsProp.arraySize - 1);
                 newTagProp.stringValue = tag;
-                Debug.Log("Tag added: " + tag);
             }
 
             tagManager.ApplyModifiedProperties();
@@ -102,7 +101,6 @@ namespace cowsins.Inspector
                 {
                     SerializedProperty newLayerProp = layersProp.GetArrayElementAtIndex(emptyLayerIndex);
                     newLayerProp.stringValue = layer;
-                    Debug.Log("Layer added: " + layer);
                 }
                 else
                 {

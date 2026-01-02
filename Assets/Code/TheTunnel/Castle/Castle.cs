@@ -70,7 +70,6 @@ namespace TheTunnel.Target
 
         private void FindPlayerStats()
         {
-            // Tìm tất cả players và lấy PlayerStats của player đầu tiên
             GameObject[] players = GameObject.FindGameObjectsWithTag(GameConstant.PLAYER_TAG);
             if (players != null && players.Length > 0)
             {
@@ -87,8 +86,6 @@ namespace TheTunnel.Target
 
             if (_playerStats == null)
             {
-                Debug.LogWarning("[Castle] PlayerStats not found");
-                //Delay to find player stats
                 StartCoroutine(DelayToFindPlayerStats());
             }
         }
@@ -129,15 +126,13 @@ namespace TheTunnel.Target
         /// </summary>
         public void TakeDamage(float damage)
         {
-            Debug.Log("TakeDamage: " + damage);
-            // Chỉ server mới xử lý damage
             if (!IsServer)
             {
                 return;
             }
 
             int newHealth = _networkHealth.Value - (int)damage;
-            newHealth = Mathf.Max(0, newHealth); // Đảm bảo không âm
+            newHealth = Mathf.Max(0, newHealth);
 
             _networkHealth.Value = newHealth;
         }
@@ -148,13 +143,11 @@ namespace TheTunnel.Target
         [ClientRpc]
         private void TriggerDeathClientRpc()
         {
-            // Tìm lại player stats nếu chưa có (có thể player spawn sau)
             if (_playerStats == null)
             {
                 FindPlayerStats();
             }
 
-            // Gọi Die() trên tất cả players
             if (_playerStats != null)
             {
                 _playerStats.Die();
@@ -165,7 +158,6 @@ namespace TheTunnel.Target
 
         private void Die()
         {
-            // Logic khi castle chết
         }
     }
 }

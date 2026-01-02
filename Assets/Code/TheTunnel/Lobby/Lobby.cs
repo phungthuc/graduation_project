@@ -58,7 +58,6 @@ namespace TheTunnel.Lobby
             void SetStatus(string s)
             {
                 if (statusText != null) statusText.text = s;
-                Debug.Log(s);
             }
 
             public void OnUserJoined()

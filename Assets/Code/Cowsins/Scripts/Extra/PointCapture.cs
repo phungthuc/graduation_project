@@ -1,5 +1,5 @@
 /// <summary>
-/// This script belongs to cowsins™ as a part of the cowsins´ FPS Engine. All rights reserved. 
+/// This script belongs to cowsinsï¿½ as a part of the cowsinsï¿½ FPS Engine. All rights reserved. 
 /// </summary>
 #if UNITY_EDITOR
 using UnityEditor;
@@ -102,7 +102,6 @@ namespace cowsins
 
              (You can always edit this one if you do not plan to add more different kinds of capture points, just to avoid unncessary scripts)*/
 
-            Debug.Log("You captured the point!");
 
             Destroy(ui);
             Destroy(this.gameObject);

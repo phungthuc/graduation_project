@@ -155,11 +155,6 @@ namespace TheTunnel.UI
             {
                 localPlayerCamera = Camera.main;
                 cameraTransform = Camera.main.transform;
-                Debug.Log($"[HealthBarBillboard] Using Camera.main as fallback for {gameObject.name}");
-            }
-            else if (localPlayerCamera == null)
-            {
-                Debug.LogWarning($"[HealthBarBillboard] Could not find local player camera for {gameObject.name}. Health bar will not rotate correctly.");
             }
         }
     }
