@@ -27,12 +27,25 @@ namespace TheTunnel.Config
 
         private void LoadLevelData()
         {
-            List<LevelData> levelDataList = JsonConvert.DeserializeObject<List<LevelData>>(levelData.text);
-            if (levelDataList == null)
+            if (levelData == null)
             {
-                Debug.LogError("Failed to load level data");
+                Debug.LogError("[GameConfigLoader] levelData TextAsset is not assigned!");
                 return;
             }
+
+            if (string.IsNullOrEmpty(levelData.text))
+            {
+                Debug.LogError("[GameConfigLoader] levelData TextAsset is empty!");
+                return;
+            }
+
+            List<LevelData> levelDataList = JsonConvert.DeserializeObject<List<LevelData>>(levelData.text);
+            if (levelDataList == null || levelDataList.Count == 0)
+            {
+                Debug.LogError("[GameConfigLoader] Failed to deserialize level data or list is empty!");
+                return;
+            }
+
             GameConfig.Instance.LevelDataList = levelDataList;
         }
     }

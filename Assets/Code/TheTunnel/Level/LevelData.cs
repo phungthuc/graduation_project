@@ -57,12 +57,6 @@ namespace TheTunnel.Level
         public List<EnemyPerWaveData> EnemyData { get; set; } = new();
     }
 
-    /// <summary>
-    /// Custom JsonConverter để parse cả array và object thành List<SpawnAreaData>
-    /// Hỗ trợ format:
-    /// - "areaName": [{...}, {...}] (array)
-    /// - "areaName": {...} (object đơn lẻ)
-    /// </summary>
     public class SpawnAreaDataConverter : JsonConverter<Dictionary<string, List<SpawnAreaData>>>
     {
         public override Dictionary<string, List<SpawnAreaData>> ReadJson(JsonReader reader, Type objectType, Dictionary<string, List<SpawnAreaData>> existingValue, bool hasExistingValue, JsonSerializer serializer)
@@ -77,10 +71,8 @@ namespace TheTunnel.Level
 
                 List<SpawnAreaData> spawnPoints = new List<SpawnAreaData>();
 
-                // Kiểm tra nếu là array
                 if (value.Type == JTokenType.Array)
                 {
-                    // Parse array các spawn points
                     foreach (var item in value)
                     {
                         SpawnAreaData spawnData = item.ToObject<SpawnAreaData>(serializer);
@@ -90,10 +82,8 @@ namespace TheTunnel.Level
                         }
                     }
                 }
-                // Kiểm tra nếu là object đơn lẻ
                 else if (value.Type == JTokenType.Object)
                 {
-                    // Parse object đơn lẻ thành một spawn point
                     SpawnAreaData spawnData = value.ToObject<SpawnAreaData>(serializer);
                     if (spawnData != null)
                     {
@@ -115,8 +105,6 @@ namespace TheTunnel.Level
             {
                 writer.WritePropertyName(kvp.Key);
 
-                // Nếu chỉ có 1 spawn point, write như object
-                // Nếu có nhiều spawn points, write như array
                 if (kvp.Value.Count == 1)
                 {
                     serializer.Serialize(writer, kvp.Value[0]);

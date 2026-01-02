@@ -25,6 +25,7 @@ namespace TheTunnel.Lobby
             {
                 Cursor.lockState = CursorLockMode.None;
                 Cursor.visible = true;
+                PlayerData.Instance.ResetData();
             }
 
             private void Start()
