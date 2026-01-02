@@ -1,4 +1,5 @@
 ﻿using cowsins;
+using TheTunnel.Core;
 using UnityEngine;
 
 namespace TheTunnel.GOAP
@@ -19,7 +20,7 @@ namespace TheTunnel.GOAP
 
         private void OnTriggerEnter(Collider other)
         {
-            if (other.CompareTag("Player"))
+            if (other.CompareTag(GameConstant.PLAYER_TAG))
             {
                 OnPlayerEnter?.Invoke(other.transform);
             }
@@ -27,7 +28,7 @@ namespace TheTunnel.GOAP
 
         private void OnTriggerExit(Collider other)
         {
-            if (other.CompareTag("Player"))
+            if (other.CompareTag(GameConstant.PLAYER_TAG))
             {
                 OnPlayerExit?.Invoke(other.transform.position);
             }

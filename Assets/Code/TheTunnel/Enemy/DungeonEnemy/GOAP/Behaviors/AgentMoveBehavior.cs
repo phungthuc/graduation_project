@@ -41,8 +41,7 @@ namespace TheTunnel.GOAP
         {
             _currentTarget = target;
             _lastPosition = _currentTarget.Position;
-            if (_navMeshAgent.isActiveAndEnabled)
-                _navMeshAgent.SetDestination(target.Position);
+            SetDestinationSafely(target.Position);
         }
 
         private void Update()
@@ -55,8 +54,36 @@ namespace TheTunnel.GOAP
             if (minMoveDistance <= Vector3.Distance(_currentTarget.Position, _lastPosition))
             {
                 _lastPosition = _currentTarget.Position;
-                if (_navMeshAgent.isActiveAndEnabled)
-                    _navMeshAgent.SetDestination(_currentTarget.Position);
+                SetDestinationSafely(_currentTarget.Position);
+            }
+        }
+
+        private void SetDestinationSafely(Vector3 destination)
+        {
+            if (_navMeshAgent == null || !_navMeshAgent.isActiveAndEnabled)
+            {
+                return;
+            }
+
+            // Ensure agent is on NavMesh before setting destination
+            if (!_navMeshAgent.isOnNavMesh)
+            {
+                return;
+            }
+
+            // Sample destination to ensure it's on NavMesh
+            UnityEngine.AI.NavMeshHit hit;
+            if (UnityEngine.AI.NavMesh.SamplePosition(destination, out hit, 5f, UnityEngine.AI.NavMesh.AllAreas))
+            {
+                _navMeshAgent.SetDestination(hit.position);
+            }
+            else
+            {
+                // If destination is not on NavMesh, try to find nearest valid position
+                if (UnityEngine.AI.NavMesh.FindClosestEdge(destination, out hit, UnityEngine.AI.NavMesh.AllAreas))
+                {
+                    _navMeshAgent.SetDestination(hit.position);
+                }
             }
         }
     }

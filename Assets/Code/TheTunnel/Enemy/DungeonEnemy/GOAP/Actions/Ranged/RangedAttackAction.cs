@@ -33,35 +33,23 @@ namespace TheTunnel.GOAP
             if (data.Target == null || _attackBehavior == null)
                 return ActionRunState.Stop;
 
-            // float distance = Vector3.Distance(agent.transform.position, data.Target.Position);
-            // if (distance > _attackConfig.attackRange)
-            // {
-            //     _attackBehavior.SetTarget(null);
-            //     return ActionRunState.Stop;
-            // }
-
-            if (Physics.OverlapSphereNonAlloc(
-                    agent.transform.position,
-                    2,
-                    _colliders,
-                    LayerMask.GetMask("Metal")
-                ) <= 0)
+            // Check distance to target
+            float distance = Vector3.Distance(agent.transform.position, data.Target.Position);
+            if (distance > _attackConfig.attackRange)
             {
                 _attackBehavior.SetTarget(null);
                 return ActionRunState.Stop;
             }
-            else
-            {
-                Vector3 targetDirection = (data.Target.Position - agent.transform.position).normalized;
-                targetDirection.y = 0; // Keep rotation only on Y axis
-                Quaternion targetRotation = Quaternion.LookRotation(targetDirection);
-                agent.transform.rotation = Quaternion.Lerp(agent.transform.rotation, targetRotation, _rotationSpeed * context.DeltaTime);
 
-                // Attack
-                _attackBehavior.SetTarget(data.Target);
-                return ActionRunState.Continue;
-            }
+            // Rotate towards target
+            Vector3 targetDirection = (data.Target.Position - agent.transform.position).normalized;
+            targetDirection.y = 0; // Keep rotation only on Y axis
+            Quaternion targetRotation = Quaternion.LookRotation(targetDirection);
+            agent.transform.rotation = Quaternion.Lerp(agent.transform.rotation, targetRotation, _rotationSpeed * context.DeltaTime);
 
+            // Attack
+            _attackBehavior.SetTarget(data.Target);
+            return ActionRunState.Continue;
         }
 
         public override void End(IMonoAgent agent, CommonData data)
