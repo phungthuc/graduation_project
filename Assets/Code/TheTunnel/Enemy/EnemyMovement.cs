@@ -54,7 +54,6 @@ namespace TheTunnel.Enemy
             {
                 _targetTransform = target.transform;
             }
-            // wait to find castle
             StartCoroutine(Delay());
         }
 
@@ -63,7 +62,6 @@ namespace TheTunnel.Enemy
             yield return new WaitForSeconds(1);
             Vector3 direction = transform.forward;
 
-            // Perform the raycast
             if (Physics.Raycast(transform.position, direction, out RaycastHit hit, scanDistance, scanLayer))
             {
                 _targetTransform = hit.transform;
@@ -81,7 +79,7 @@ namespace TheTunnel.Enemy
 
         private void FixedUpdate()
         {
-            if (!IsServer) return; // Chỉ server điều khiển movement
+            if (!IsServer) return;
 
             if (!isMoving.Value || _targetTransform == null)
             {

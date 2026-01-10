@@ -12,8 +12,7 @@ namespace TheTunnel.Enemy
 
         [HideInInspector] public EnemyStat stat;
         [HideInInspector] public NetworkVariable<bool> isPaused = new NetworkVariable<bool>(false);
-        
-        // NetworkVariables để đồng bộ health (sử dụng bởi EnemyHealth)
+
         public NetworkVariable<float> networkHealth = new NetworkVariable<float>(
             100f,
             NetworkVariableReadPermission.Everyone,
@@ -29,11 +28,9 @@ namespace TheTunnel.Enemy
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
-            
-            // Chỉ server mới có quyền điều khiển Enemy
+
             if (!IsServer)
             {
-                // Client chỉ cần theo dõi trạng thái
                 return;
             }
         }

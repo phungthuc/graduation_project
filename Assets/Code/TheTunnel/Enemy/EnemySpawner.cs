@@ -71,13 +71,11 @@ namespace TheTunnel.Enemy
                     return;
                 }
 
-                // Spawn enemy như NetworkObject
                 if (!networkObject.IsSpawned)
                 {
                     networkObject.Spawn();
                 }
 
-                // Update position for navmesh agent
                 NavMeshAgent agent = enemy.GetComponent<NavMeshAgent>();
                 if (agent != null)
                 {
