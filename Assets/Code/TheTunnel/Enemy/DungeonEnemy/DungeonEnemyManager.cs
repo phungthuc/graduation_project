@@ -23,6 +23,7 @@ namespace TheTunnel
         private int _currentZoneIndex;
         private Dictionary<string, int> _zoneSpawnCount;
         private Dictionary<string, int> _zoneDiedCount;
+        private bool _isDungeonDataLoaded = false;
 
         [SerializeField] private GameObject winGameUI;
 
@@ -46,10 +47,6 @@ namespace TheTunnel
                 _enemySpawner.EnemyDied -= OnEnemyDied;
             }
         }
-
-        /// <summary>
-        /// Load dungeon data và spawn zone đầu tiên (tương tự LoadWaveData trong EnemyManager)
-        /// </summary>
         public void LoadDungeonData(DungeonData dungeonData)
         {
             if (NetworkManager.Singleton != null &&
@@ -59,12 +56,19 @@ namespace TheTunnel
                 return;
             }
 
+            if (_isDungeonDataLoaded)
+            {
+                Debug.LogWarning("[DungeonEnemyManager] LoadDungeonData called multiple times. Ignoring duplicate call to prevent double spawning.");
+                return;
+            }
+
             CleanupAllEnemies();
 
             currentDungeonData = dungeonData;
             _enemySpawnCount = 0;
             _enemyDiedCount = 0;
             _isPaused = false;
+            _isDungeonDataLoaded = true;
 
             _zoneList = new List<string>(dungeonData.EnemySpawnData.Keys);
             _currentZoneIndex = 0;
@@ -79,7 +83,6 @@ namespace TheTunnel
         }
 
         /// <summary>
-        /// Alias method để tương thích với LevelManager (LoadDungeonData3)
         /// </summary>
         public void LoadDungeonData3(DungeonData dungeonData)
         {
@@ -87,7 +90,6 @@ namespace TheTunnel
         }
 
         /// <summary>
-        /// Stop spawning enemies (tương tự StopWave trong EnemyManager)
         /// </summary>
         public void StopWave()
         {
@@ -95,7 +97,6 @@ namespace TheTunnel
         }
 
         /// <summary>
-        /// Cleanup tất cả enemies từ session trước để tránh lỗi khi load dungeon mới
         /// </summary>
         private void CleanupAllEnemies()
         {
@@ -109,11 +110,10 @@ namespace TheTunnel
             _enemyDiedCount = 0;
             _zoneSpawnCount?.Clear();
             _zoneDiedCount?.Clear();
+            _isDungeonDataLoaded = false;
         }
 
         /// <summary>
-        /// Spawn enemies cho một zone (tương tự SpawnWave trong EnemyManager)
-        /// Hỗ trợ nhiều spawn points cho mỗi zone
         /// </summary>
         public void SpawnDungeonWave(string zoneName)
         {
@@ -187,7 +187,6 @@ namespace TheTunnel
         }
 
         /// <summary>
-        /// Spawn enemy với delay (tương tự EnemyManager)
         /// </summary>
         private System.Collections.IEnumerator SpawnEnemyWithDelay(string enemyId, Vector3 position, float delay)
         {
@@ -196,7 +195,6 @@ namespace TheTunnel
         }
 
         /// <summary>
-        /// Lấy spawn position cho enemy (có thể randomize xung quanh base position nếu có nhiều enemy)
         /// </summary>
         private Vector3 GetSpawnPosition(Vector3 basePosition, int totalAmount, int currentIndex)
         {
@@ -224,16 +222,10 @@ namespace TheTunnel
             _enemySpawner.Spawn(enemyId, position);
         }
 
-        /// <summary>
-        /// Callback khi enemy được spawn (tương tự EnemyManager)
-        /// </summary>
         private void OnEnemySpawned()
         {
         }
 
-        /// <summary>
-        /// Callback khi enemy chết (tương tự EnemyManager)
-        /// </summary>
         private void OnEnemyDied()
         {
             _enemyDiedCount++;
@@ -274,7 +266,6 @@ namespace TheTunnel
         }
 
         /// <summary>
-        /// Kiểm tra win condition dựa trên tổng số enemies
         /// </summary>
         private void CheckWinCondition()
         {
